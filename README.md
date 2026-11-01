@@ -19,7 +19,7 @@ A WebSwan Digital Solutions platform: one smart desk with three AI agents for sm
 ## Setup (once)
 1. Netlify: new site from this repo (name it `swandesk-ai`). No build command; publish directory `.`.
 2. Firebase console (project webswan-gigoia-task) → Authentication → Settings → Authorized domains → add the Netlify domain (and any custom domain).
-3. Later phases: CARTESIA_API_KEY (SwanDesk's own Cartesia account), DEEPSEEK_API_KEY, CONTENT360_API_KEY.
+3. Later phases (Netlify environment variables): CARTESIA_API_KEY (SwanDesk's own Cartesia account, multimediasite23), TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN, DEEPSEEK_API_KEY, ZERNIO_API_KEY (Stan's posting for clients).
 
 ## Prices (editable in admin)
 Jennifer $349 · Eva $199 · Stan $199 · any 2 $499 · all 3 $699 per month. Setup $299 (1-2 agents) / $499 (3). Every 3 months 5% off, every 6 months 10% off, yearly 15% off.
