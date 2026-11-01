@@ -19,3 +19,10 @@ Morning inbox briefing (sender, subject, short snippet only), drafts with PDF/ph
 - Publishing for CLIENTS goes through a unified posting API (e.g. Zernio): each client connects their own Facebook, Instagram, LinkedIn, TikTok and Google Business through a secure link. Decision (Nov 1, 2026): Tania's Content360 is NOT used for clients; it stays for The WebSwan only.
 - The publisher layer stays swappable, so SwanDesk's own platform apps can be added later after each platform's app review.
 - Failed posts are reported to the client and to Tania immediately.
+
+## Jennifer's final prompt: Tania's notes from testing the demo (Nov 1, 2026)
+1. Repeat the email back in a normal voice; do NOT spell it letter by letter.
+2. Never hang up before the caller says goodbye; wait for them to end, then close warmly.
+3. Be personable: chat and answer general questions (a burrito recipe, places to visit in Boston), then gently return to helping. Don't keep rerouting to the appointment.
+4. On inbound calls, introduce herself as the receptionist: she sets appointments, collects the caller's information and the reason for their call, and also makes warm outbound appointment-setting calls for people who met the business and asked for a call back. No cold calls.
+Note: the demo test used 6 min 19 sec; no more test calls until Nov 5.
