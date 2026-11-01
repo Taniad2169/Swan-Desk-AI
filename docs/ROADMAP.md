@@ -26,3 +26,14 @@ Morning inbox briefing (sender, subject, short snippet only), drafts with PDF/ph
 3. Be personable: chat and answer general questions (a burrito recipe, places to visit in Boston), then gently return to helping. Don't keep rerouting to the appointment.
 4. On inbound calls, introduce herself as the receptionist: she sets appointments, collects the caller's information and the reason for their call, and also makes warm outbound appointment-setting calls for people who met the business and asked for a call back. No cold calls.
 Note: the demo test used 6 min 19 sec; no more test calls until Nov 5.
+
+## Selling SwanDesk-AI (Tania's plan, Nov 1, 2026)
+- Website: "Interested in the package? Call Jennifer for more insight." The demo Jennifer explains SwanDesk-AI, answers questions, and books a 10-minute appointment with Tania on Tania's Google Calendar.
+- After each demo call, Tania gets an email AND a message in the SwanDesk admin chat (Rachel/Marblism style) with the summary, and can replay the call recording.
+- The demo number is used only for demos. Client numbers come from Twilio and connect to a separate "Jennifer – Clients" agent.
+- Voice Studio sells it: Alek (floater) collects emails and appointments for SwanDesk-AI and gives prospects Jennifer's demo number ("call her, try her, ask her anything; if interested, book 10 minutes with Tania"). Possibly a duplicate Rebecca for SwanDesk booking.
+- Later: Rachel on ads.webswanmedianetwork.com talks about both Media Network advertising and SwanDesk-AI (SwanDesk is part of WebSwan Media Network). Not yet.
+
+## Heavy-usage pricing
+- $349 Jennifer plan includes about 1,950 minutes; overage $0.15/min. A 3,500-minute client = $349 + 1,550 x $0.15 = $581.50/month.
+- Consider a "Jennifer Pro" tier (e.g. 4,000 minutes for about $549) for busy offices.
