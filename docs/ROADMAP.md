@@ -37,3 +37,7 @@ Note: the demo test used 6 min 19 sec; no more test calls until Nov 5.
 ## Heavy-usage pricing
 - $349 Jennifer plan includes about 1,950 minutes; overage $0.15/min. A 3,500-minute client = $349 + 1,550 x $0.15 = $581.50/month.
 - Consider a "Jennifer Pro" tier (e.g. 4,000 minutes for about $549) for busy offices.
+
+## Jennifer demo line: always capture the caller
+Anyone who calls the demo number is interested, so Jennifer must get and save the caller's **name, company/practice and phone number** (caller ID plus confirmation) on every call, even if they only test her.
+Tania gets an email + SwanDesk admin chat message with those details and the recording, so she can call them right back.
