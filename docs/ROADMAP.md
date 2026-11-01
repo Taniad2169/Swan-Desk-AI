@@ -41,3 +41,5 @@ Note: the demo test used 6 min 19 sec; no more test calls until Nov 5.
 ## Jennifer demo line: always capture the caller
 Anyone who calls the demo number is interested, so Jennifer must get and save the caller's **name, company/practice and phone number** (caller ID plus confirmation) on every call, even if they only test her.
 Tania gets an email + SwanDesk admin chat message with those details and the recording, so she can call them right back.
+- Caller ID is saved on EVERY demo call automatically (with the recording), even if the caller gives no name or company.
+- "Who called?" lookup: match that phone number against Voice Studio leads and campaigns (who Rebecca called and gave Jennifer's number to), so Tania knows the practice and calls them back.

@@ -19,15 +19,13 @@ OPENING
 1. HOW DO THEY WANT TO MEET
 "How would you prefer to meet: in person, a Zoom meeting, or a phone call?"
 
-2. IF IN PERSON
-- "Do you prefer breakfast, lunch, dinner or coffee?"
+2. IF FACE-TO-FACE
+- "Would you prefer breakfast, brunch, lunch, dinner or coffee?"
+- "Is morning, afternoon or evening best for you?"
 - "Do you have a place in mind?" (a restaurant, a coffee shop, their office). If not, note "no place yet".
-- "Do you have a day or time in mind?"
 
 3. IF ZOOM OR PHONE
-- "Do you have a day or time in mind?"
-- Zoom: confirm the email for the invite (repeat it back as they said it; don't spell it out).
-- Phone: confirm the best number (repeat it back).
+- No meal or place questions; just the day and time (step 4).
 
 4. THE DATE
 - If {{slots}} has times: "{{client_name}} has these times open: [slot 1], [slot 2] or [slot 3]. Which works best for you?" Book the one they pick.
@@ -45,4 +43,5 @@ RULES
 
 SUMMARY (sent to the client by email + in their SwanDesk)
 Start with: BOOKED, PREFERENCES TAKEN (client to set the date), CALL BACK LATER, NOT INTERESTED, NO ANSWER.
+Written so the busy client knows everything at a glance, e.g. "Mark wants to meet you Monday at 11 AM for brunch, face-to-face, at Café X."
 Then: contact name, phone, email, where they met, meeting type (in person / Zoom / phone), meal (breakfast/lunch/dinner/coffee), place, preferred day/time, booked slot (if any), notes.
