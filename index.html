@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwanDesk AI</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="img/ws-logo.png">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="auth.js"></script>
+</head>
+<body>
+<header class="top"><img src="img/ws-logo.png" alt="WebSwan"><div><h1>SwanDesk AI</h1><small>Your Business. Your AI Team. One Smart Desk.</small></div><span class="sp"></span>
+  <span id="who" style="font-size:.85rem"></span><button class="btn wh" id="outBtn" hidden>Sign out</button></header>
+
+<div id="gate" class="card gate">
+  <h2>Welcome to SwanDesk AI</h2>
+  <p class="muted">Sign in with the Google account WebSwan set up for your business.</p>
+  <button class="btn" id="inBtn">Sign in with Google</button>
+  <p id="gateMsg" class="muted" role="alert"></p>
+</div>
+
+<main class="wrap" id="app" hidden>
+  <div id="banner" class="banner" hidden></div>
+  <section class="card"><h2 id="biz">Your team</h2><p class="muted" id="hello"></p></section>
+  <section class="grid3" id="agents"></section>
+</main>
+<footer>SwanDesk AI · A WebSwan Digital Solutions platform</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const toast = (t) => { const e = $("toast"); e.textContent = t; e.style.display = "block"; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = "none", 4000); };
+const as = new URLSearchParams(location.search).get("as") || "";
+const LABEL = { active: "Active", paused: "Paused", suspended: "Unavailable", locked: "Not on your plan" };
+let W = null;
+
+function draw() {
+  $("biz").textContent = W.business;
+  $("hello").textContent = (W.ownerName ? "Hi " + W.ownerName.split(" ")[0] + "! " : "") + "Here is your SwanDesk team." + (as ? " (You are viewing this as the client.)" : "");
+  $("banner").hidden = W.status === "active"; $("banner").textContent = W.statusNote;
+  $("agents").innerHTML = Object.entries(W.agents).map(([k, a]) => `
+    <article class="agent ${a.state === "locked" ? "locked" : ""}" tabindex="0" data-k="${k}">
+      <div class="av" aria-hidden="true">${esc(a.name[0])}</div>
+      <h3>${esc(a.name)}</h3><div class="role">${esc(a.role)}</div>
+      <span class="pill ${a.state}">${LABEL[a.state] || a.state}</span>
+      <div class="desc">${esc(a.desc)}</div>
+      ${a.state === "locked" ? `<p class="muted" style="margin:10px 0 6px">Hover or tap to see what ${esc(a.name)} can do for you.</p><button class="btn sm" data-req="${k}">I'm interested in ${esc(a.name)}</button>` : ""}
+      ${a.state === "active" ? `<p class="muted">${esc(a.name)} is set up for you. Tools open here soon.</p><button class="btn ghost sm" data-pause="${k}">Pause ${esc(a.name)}</button>` : ""}
+      ${a.state === "paused" ? `<button class="btn sm" data-resume="${k}">Resume ${esc(a.name)}</button>` : ""}
+    </article>`).join("");
+  document.querySelectorAll("[data-req]").forEach((b) => b.onclick = async (e) => { e.stopPropagation(); try { toast((await SD.api("sd-client", { action: "request", agent: b.dataset.req, as })).message); } catch (x) { toast(x.message); } });
+  document.querySelectorAll("[data-pause],[data-resume]").forEach((b) => b.onclick = async () => { const k = b.dataset.pause || b.dataset.resume; try { W = (await SD.api("sd-client", { action: b.dataset.pause ? "pause" : "resume", agent: k, as })).workspace; draw(); } catch (x) { toast(x.message); } });
+  document.querySelectorAll(".agent.locked").forEach((c) => c.onclick = () => c.classList.toggle("show"));
+}
+
+$("inBtn").onclick = () => SD.signIn().catch((e) => $("gateMsg").textContent = e.message);
+$("outBtn").onclick = () => SD.signOut();
+window.addEventListener("sd-auth", async (e) => {
+  const u = e.detail.user;
+  $("outBtn").hidden = !u; $("who").textContent = u ? u.email : "";
+  if (!u) { $("gate").hidden = false; $("app").hidden = true; return; }
+  try { W = (await SD.api("sd-client", { action: "me", as })).workspace; $("gate").hidden = true; $("app").hidden = false; draw(); }
+  catch (x) { $("gate").hidden = false; $("app").hidden = true; $("gateMsg").textContent = x.message; }
+});
+</script>
+</body>
+</html>
