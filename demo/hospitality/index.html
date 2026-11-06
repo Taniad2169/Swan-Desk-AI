@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwanDesk AI for Vacation Rentals · Demo</title>
+<meta name="description" content="See how Jennifer, SwanDesk's AI receptionist, handles vacation rental guest calls 24/7: early check-in, lost door codes and maintenance issues, with a summary sent to the manager.">
+<link rel="icon" href="../../img/ws-logo.png">
+<link rel="stylesheet" href="../../style.css">
+<style>
+.hero{background:linear-gradient(180deg,#0b2f57,#123f70);color:#fff;padding:30px 16px 34px}
+.hero .in{max-width:1150px;margin:0 auto}.hero h2{font-size:2rem;margin:6px 0 8px;line-height:1.2}.hero p{opacity:.92;margin:0;max-width:760px}
+.badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0d68a;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700}
+.tabsx{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.tabsx button{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;min-height:40px}
+.tabsx button[aria-selected="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+.call{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+.chat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;min-height:360px}
+.bub{max-width:85%;padding:10px 13px;border-radius:14px;margin:8px 0;line-height:1.45;opacity:0;transform:translateY(6px);transition:all .35s}
+.bub.show{opacity:1;transform:none}
+.bub.g{background:#eef3f8;color:var(--ink);border-bottom-left-radius:4px}
+.bub.j{background:var(--blue);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.who{font-size:.75rem;font-weight:700;opacity:.75;display:block;margin-bottom:2px}
+.sum{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.sum h3{margin:0 0 8px;color:var(--navy);font-size:1rem}.sum dl{margin:0}.sum dt{font-weight:700;font-size:.82rem;color:var(--muted);margin-top:8px}.sum dd{margin:2px 0 0}
+.tag{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:700}
+.tag.ok{background:#e6f4ec;color:#11804a}.tag.warn{background:#fff3e0;color:#a66300}.tag.bad{background:#fdecea;color:#b42318}
+.kb{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.kb div{background:#f6f9fd;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:.9rem}
+@media (max-width:820px){.call{grid-template-columns:1fr}.hero h2{font-size:1.5rem}}
+@media (prefers-reduced-motion:reduce){.bub{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><img src="../../img/ws-logo.png" alt="WebSwan"><div><h1>SwanDesk-AI</h1><small>Your Business. Your AI Team. One Smart Desk.</small></div><span class="sp"></span>
+  <a class="btn wh" href="../" style="text-decoration:none">← SwanDesk demo</a></header>
+
+<section class="hero"><div class="in">
+  <span class="badge">Demo · Vacation rentals</span>
+  <h2>Jennifer answers your guests 24/7, so you don't have to.</h2>
+  <p>Pick a call below and watch how Jennifer, your SwanDesk AI receptionist, handles it from your property's knowledge sheet, and what you receive when the call ends. Sample property and guests are fictional.</p>
+</div></section>
+
+<main class="wrap">
+  <div class="tabsx" role="tablist" aria-label="Demo calls">
+    <button role="tab" aria-selected="true" data-s="checkin">🕑 Early check-in</button>
+    <button role="tab" aria-selected="false" data-s="code">🔑 Lost door code</button>
+    <button role="tab" aria-selected="false" data-s="ac">🛠️ AC not working</button>
+    <button role="tab" aria-selected="false" data-s="owner">🏠 New owner lead</button>
+  </div>
+  <div class="call">
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <aside class="sum" id="sum" aria-live="polite"><h3>Summary sent to the manager</h3><p class="muted">Appears when the call ends.</p></aside>
+  </div>
+  <p style="margin:10px 0 0"><button class="btn ghost sm" id="replay">↻ Replay this call</button></p>
+
+  <section class="card" style="margin-top:18px"><h2>What Jennifer knows (your property's knowledge sheet)</h2>
+    <p class="muted">You fill this in once per property. Jennifer only answers from it and escalates anything else to you.</p>
+    <div class="kb">
+      <div><b>Sample property</b><br>Lake Cypress Villa, Kissimmee FL · 4 bedrooms, pool</div>
+      <div><b>Check-in / out</b><br>4:00 PM / 10:00 AM · early check-in from 1:00 PM if the cleaners finish, $35</div>
+      <div><b>Door code</b><br>Sent by text on arrival day; Jennifer verifies the guest's name and booking before re-sending</div>
+      <div><b>Wi-Fi, parking, rules</b><br>2 cars in driveway · pool heat on request · quiet hours 10 PM</div>
+      <div><b>Emergencies</b><br>AC, water, power, lockout → text manager + on-call technician right away</div>
+      <div><b>Owner inquiries</b><br>Book a 15-minute call with the manager on the calendar</div>
+    </div>
+  </section>
+
+  <section class="card" style="text-align:center">
+    <h2>Want Jennifer answering your rentals?</h2>
+    <p class="muted">Call Rachel at <a href="tel:+13162486839"><b>(316) 248-6839</b></a> or book a free 15-minute demo.</p>
+    <a class="btn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20for%20vacation%20rentals">Book your free demo</a>
+  </section>
+</main>
+<footer>SwanDesk AI · A WebSwan Digital Solutions platform</footer>
+<script>
+const S = {
+  checkin: { lines: [
+    ["g","Hi, we're staying at Lake Cypress Villa tonight. Our flight lands early, can we check in at noon?"],
+    ["j","Welcome! I'm Jennifer with the Lake Cypress Villa team. Check-in is at 4 PM. Early check-in starts at 1 PM when the cleaners are done, and it's $35. May I have the name on the booking?"],
+    ["g","Maria Lopez."],
+    ["j","Thank you, Maria. I've requested 1 PM early check-in for you. The team will confirm by text once the house is ready. Is this the best number to text?"],
+    ["g","Yes, perfect. Thank you!"],
+    ["j","You're welcome! Safe travels, and enjoy the pool."]],
+    sum: { tag:["ok","Handled"], guest:"Maria Lopez · Lake Cypress Villa · tonight", need:"Early check-in, lands early", done:"Offered 1 PM early check-in ($35) per house rules; request sent", next:"Confirm with cleaners and text Maria when ready" } },
+  code: { lines: [
+    ["g","Hi, I'm at the front door and I can't find the door code."],
+    ["j","I'm sorry about that, I'll help right away. For security, may I have the name on the booking and your check-out date?"],
+    ["g","James Carter, checking out Sunday."],
+    ["j","Thank you, James, that matches the booking. I'm texting the door code to the number on your reservation now. You should have it in a few seconds."],
+    ["g","Got it, we're in!"],
+    ["j","Wonderful! Wi-Fi details are on the fridge. Have a great stay."]],
+    sum: { tag:["ok","Handled"], guest:"James Carter · Lake Cypress Villa · out Sunday", need:"Couldn't find the door code on arrival", done:"Verified name and check-out date, re-sent code by text to the booking number", next:"Nothing needed" } },
+  ac: { lines: [
+    ["g","Hi, the air conditioning stopped working and it's really hot in here."],
+    ["j","I'm so sorry, let's fix that fast. Is the thermostat screen on, and is it set to Cool?"],
+    ["g","It's on and set to 72 but it's blowing warm air."],
+    ["j","Thank you. I'm alerting the manager and our on-call technician now as urgent. Someone will call you within 30 minutes. Meanwhile, ceiling fans are in every bedroom. May I have your name?"],
+    ["g","Kevin Brooks."],
+    ["j","Thank you, Kevin. Help is on the way. If anything gets worse, call this number anytime."]],
+    sum: { tag:["bad","Urgent · escalated"], guest:"Kevin Brooks · Lake Cypress Villa", need:"AC blowing warm air (set to Cool, 72°)", done:"Basic check done; manager + on-call technician alerted by text immediately", next:"Technician to call guest within 30 min; follow up after repair" } },
+  owner: { lines: [
+    ["g","Hi, I own a condo in Davenport and I'm looking for someone to manage it on Airbnb."],
+    ["j","Thanks for calling! I'd love to connect you with our manager. May I have your name and the property's area and size?"],
+    ["g","Linda Park. It's a 3-bedroom near ChampionsGate."],
+    ["j","Thank you, Linda. Would tomorrow at 10 AM or 2 PM Eastern work for a 15-minute call?"],
+    ["g","2 PM works."],
+    ["j","You're booked for tomorrow at 2 PM Eastern. You'll get a confirmation by text. Have a great day!"]],
+    sum: { tag:["warn","New lead · booked"], guest:"Linda Park · 3BR condo near ChampionsGate, Davenport", need:"Wants a manager for her Airbnb", done:"Booked 15-min call tomorrow 2 PM Eastern on the manager's calendar", next:"Call Linda at 2 PM" } }
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let cur = "checkin", timers = [];
+function play(k) {
+  cur = k; timers.forEach(clearTimeout); timers = [];
+  document.querySelectorAll(".tabsx button").forEach((b) => b.setAttribute("aria-selected", b.dataset.s === k));
+  const s = S[k]; $("chat").innerHTML = ""; $("sum").innerHTML = '<h3>Summary sent to the manager</h3><p class="muted">Appears when the call ends.</p>';
+  s.lines.forEach(([w, t], i) => timers.push(setTimeout(() => {
+    const d = document.createElement("div"); d.className = "bub " + w;
+    d.innerHTML = `<span class="who">${w === "j" ? "Jennifer (AI receptionist)" : "Guest"}</span>${esc(t)}`;
+    $("chat").appendChild(d); requestAnimationFrame(() => d.classList.add("show"));
+  }, reduce ? 0 : i * 1600)));
+  timers.push(setTimeout(() => {
+    const m = s.sum;
+    $("sum").innerHTML = `<h3>Summary sent to the manager</h3><span class="tag ${m.tag[0]}">${m.tag[1]}</span><dl>
+      <dt>Caller</dt><dd>${esc(m.guest)}</dd><dt>What they needed</dt><dd>${esc(m.need)}</dd>
+      <dt>What Jennifer did</dt><dd>${esc(m.done)}</dd><dt>Next step</dt><dd>${esc(m.next)}</dd></dl>`;
+  }, reduce ? 0 : s.lines.length * 1600 + 400));
+}
+document.querySelectorAll(".tabsx button").forEach((b) => b.onclick = () => play(b.dataset.s));
+$("replay").onclick = () => play(cur);
+play("checkin");
+</script>
+</body>
+</html>
