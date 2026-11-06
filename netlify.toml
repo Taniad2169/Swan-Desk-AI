@@ -9,3 +9,16 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), geolocation=()"
+
+# Google sign-in through this site's own address (needed for phones and browsers that block third-party cookies)
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://webswan-gigoia-task.firebaseapp.com/__/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/__/firebase/*"
+  to = "https://webswan-gigoia-task.firebaseapp.com/__/firebase/:splat"
+  status = 200
+  force = true
