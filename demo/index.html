@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwanDesk AI · See how it works</title>
+<meta name="description" content="SwanDesk AI by The WebSwan: one smart desk with three AI teammates for small businesses. Jennifer answers calls, Eva runs your inbox, Stan handles social media.">
+<link rel="icon" href="../img/ws-logo.png">
+<link rel="stylesheet" href="../style.css">
+<style>
+.hero{background:linear-gradient(180deg,#0b2f57,#123f70);color:#fff;padding:34px 16px 40px}
+.hero .in{max-width:1150px;margin:0 auto;display:grid;grid-template-columns:1.05fr 1fr;gap:28px;align-items:center}
+.hero h2{font-size:2.1rem;margin:0 0 8px;line-height:1.15}.hero p{opacity:.92;margin:0 0 16px}
+.hero .cta{display:flex;gap:10px;flex-wrap:wrap}.hero .btn.wh{color:#fff}
+.vid{background:#000;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);aspect-ratio:16/9}
+.vid video{width:100%;height:100%;display:block}
+.vid .soon{color:#cfe3f7;display:flex;align-items:center;justify-content:center;height:100%;padding:20px;text-align:center}
+.demo-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0d68a;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700;margin-bottom:10px}
+.agent .feat{margin:10px 0 0;padding-left:18px;font-size:.9rem}.agent .feat li{margin:3px 0}
+.mock{position:relative}.mock .lock{position:absolute;inset:0;background:rgba(243,248,253,.55);display:flex;align-items:flex-end;justify-content:center;padding:14px;border-radius:16px}
+.mock .lock span{background:#0b2f57;color:#fff;border-radius:10px;padding:8px 14px;font-weight:700;font-size:.88rem}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.steps div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+.steps div::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;margin-bottom:6px}
+@media (max-width:820px){.hero .in{grid-template-columns:1fr}.hero h2{font-size:1.6rem}}
+</style>
+</head>
+<body>
+<header class="top"><img src="../img/ws-logo.png" alt="WebSwan"><div><h1>SwanDesk-AI</h1><small>Your Business. Your AI Team. One Smart Desk.</small></div><span class="sp"></span>
+  <a class="btn wh" href="../" style="text-decoration:none">Client sign in</a></header>
+
+<section class="hero" aria-labelledby="ht"><div class="in">
+  <div>
+    <span class="demo-badge">Demo · see how it works</span>
+    <h2 id="ht">One smart desk. Three AI teammates for your business.</h2>
+    <p>Jennifer answers your calls, Eva keeps your inbox under control, and Stan runs your social media. You stay in control and turn each teammate on or off anytime.</p>
+    <div class="cta"><a class="btn" id="bookBtn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a><a class="btn wh" href="#team">Meet the team</a></div>
+  </div>
+  <div class="vid" id="vidBox"><div class="soon">The SwanDesk AI video is coming here.</div></div>
+</div></section>
+
+<main class="wrap">
+  <section class="card"><h2>How SwanDesk AI works</h2>
+    <div class="steps">
+      <div><b>Pick your teammates</b><p class="muted">Choose Jennifer, Eva, Stan, or all three.</p></div>
+      <div><b>We set up your own desk</b><p class="muted">WebSwan builds a private SwanDesk just for your business, with your Google sign-in.</p></div>
+      <div><b>Your team goes to work</b><p class="muted">Calls answered, inbox handled, posts scheduled. You approve what matters.</p></div>
+      <div><b>Stay in control</b><p class="muted">Pause or resume any teammate from your dashboard.</p></div>
+    </div>
+  </section>
+
+  <section id="team" aria-labelledby="tt"><h2 id="tt" style="color:var(--navy)">Meet your team</h2>
+    <div class="grid3">
+      <article class="agent"><div class="av" aria-hidden="true">J</div><h3>Jennifer</h3><div class="role">Receptionist &amp; appointment setter</div>
+        <ul class="feat"><li>Answers every call, day and night</li><li>Books appointments on your calendar</li><li>Calls your warm leads back</li></ul></article>
+      <article class="agent"><div class="av" aria-hidden="true">E</div><h3>Eva</h3><div class="role">Executive assistant</div>
+        <ul class="feat"><li>Briefs you on your inbox every morning</li><li>Drafts replies for your OK</li><li>Keeps follow-ups on track</li></ul></article>
+      <article class="agent"><div class="av" aria-hidden="true">S</div><h3>Stan</h3><div class="role">Social media content</div>
+        <ul class="feat"><li>Plans your month of posts</li><li>Makes branded pictures</li><li>Schedules them for you</li></ul></article>
+    </div>
+  </section>
+
+  <section class="card mock" style="margin-top:16px" aria-label="Preview of a client dashboard">
+    <h2>Your dashboard (preview)</h2>
+    <p class="muted">This is what your private SwanDesk looks like after setup.</p>
+    <div class="grid3" aria-hidden="true">
+      <article class="agent"><div class="av">J</div><h3>Jennifer</h3><span class="pill active">Active</span><p class="muted">Jennifer is set up for you.</p><button class="btn ghost sm" disabled>Pause Jennifer</button></article>
+      <article class="agent"><div class="av">E</div><h3>Eva</h3><span class="pill paused">Paused</span><p class="muted">Paused by you.</p><button class="btn sm" disabled>Resume Eva</button></article>
+      <article class="agent locked"><div class="av">S</div><h3>Stan</h3><span class="pill locked">Not on your plan</span><p class="muted">Add Stan anytime.</p><button class="btn sm" disabled>I'm interested in Stan</button></article>
+    </div>
+    <div class="lock"><span>🔒 Demo only. Your own SwanDesk is set up after you sign up.</span></div>
+  </section>
+
+  <section class="card" style="text-align:center">
+    <h2>Ready for your own SwanDesk?</h2>
+    <p class="muted">Book a free demo and we'll show you SwanDesk working for a business like yours.</p>
+    <a class="btn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a>
+  </section>
+</main>
+<footer>SwanDesk AI · A WebSwan Digital Solutions platform</footer>
+<script>
+// The promo video. Set VIDEO_URL to the hosted MP4 (or a YouTube embed link).
+const VIDEO_URL = "";
+if (VIDEO_URL) {
+  const box = document.getElementById("vidBox");
+  box.innerHTML = /youtube\.com|youtu\.be/.test(VIDEO_URL)
+    ? '<iframe src="' + VIDEO_URL + '" title="SwanDesk AI video" style="width:100%;height:100%;border:0" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>'
+    : '<video controls playsinline preload="metadata" src="' + VIDEO_URL + '"></video>';
+}
+</script>
+</body>
+</html>
