@@ -12,8 +12,10 @@
 .hero .in{max-width:1150px;margin:0 auto;display:grid;grid-template-columns:1.05fr 1fr;gap:28px;align-items:center}
 .hero h2{font-size:2.1rem;margin:0 0 8px;line-height:1.15}.hero p{opacity:.92;margin:0 0 16px}
 .hero .cta{display:flex;gap:10px;flex-wrap:wrap}.hero .btn.wh{color:#fff}
-.vid{background:#000;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);aspect-ratio:16/9}
-.vid video{width:100%;height:100%;display:block}
+.vid{position:relative;background:#000;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);aspect-ratio:16/10}
+.vid video{width:100%;height:100%;display:block;object-fit:contain}
+.vid .sndbtn{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(15,42,74,.92);color:#fff;border:0;border-radius:999px;padding:11px 18px;font:700 14px/1 inherit;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:3;animation:sndpulse 1.6s ease-in-out infinite}
+@keyframes sndpulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
 .vid .soon{color:#cfe3f7;display:flex;align-items:center;justify-content:center;height:100%;padding:20px;text-align:center}
 .demo-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0d68a;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700;margin-bottom:10px}
 .agent .feat{margin:10px 0 0;padding-left:18px;font-size:.9rem}.agent .feat li{margin:3px 0}
@@ -91,9 +93,23 @@
 const VIDEO_URL = "https://v3b.fal.media/files/b/0ab15b16/u5wwnKIxHoeSqaKwEqWM0_SwanDesk-AI-Tania-voice.mp4";
 if (VIDEO_URL) {
   const box = document.getElementById("vidBox");
-  box.innerHTML = /youtube\.com|youtu\.be/.test(VIDEO_URL)
-    ? '<iframe src="' + VIDEO_URL + '" title="SwanDesk AI video" style="width:100%;height:100%;border:0" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>'
-    : '<video controls playsinline preload="metadata" src="' + VIDEO_URL + '"></video>';
+  if (/youtube\.com|youtu\.be/.test(VIDEO_URL)) {
+    box.innerHTML = '<iframe src="' + VIDEO_URL + '" title="SwanDesk AI video" style="width:100%;height:100%;border:0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  } else {
+    // Browsers won't autoplay WITH sound, so we start muted (that always plays) and switch sound on at the first tap/scroll.
+    box.innerHTML = '<video id="swanVid" autoplay muted loop controls playsinline preload="auto" src="' + VIDEO_URL + '"></video>'
+      + '<button class="sndbtn" id="swanSnd" aria-label="Turn on sound">🔊 Tap for sound</button>';
+    var v = document.getElementById("swanVid"), snd = document.getElementById("swanSnd");
+    var tryPlay = function(){ var p = v.play(); if (p && p.catch) p.catch(function(){}); };
+    tryPlay();
+    var on = function(){ v.muted = false; v.volume = 1; tryPlay(); if (snd) snd.remove();
+      ["pointerdown","touchstart","keydown","scroll"].forEach(function(e){ window.removeEventListener(e, on, true); }); };
+    // first interaction anywhere turns sound on
+    ["pointerdown","touchstart","keydown","scroll"].forEach(function(e){ window.addEventListener(e, on, { capture:true, once:false, passive:true }); });
+    if (snd) snd.addEventListener("click", function(ev){ ev.stopPropagation(); on(); });
+    // if the browser allowed unmuted autoplay outright, drop the badge
+    v.addEventListener("volumechange", function(){ if (!v.muted && snd) snd.remove(); });
+  }
 }
 </script>
 </body>
