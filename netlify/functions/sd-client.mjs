@@ -1,6 +1,6 @@
 // SwanDesk AI client API: what the signed-in client sees (their workspace, which agents are on) and upgrade requests.
 // A client can pause/resume an ACTIVE agent they own; they can never unlock a locked or suspended one.
-import { whoIs, isAdmin, sameSite, json, clean, AGENTS, sd, tenant, tenantForEmail, saveTenant, audit } from "../lib/core.mjs";
+import { whoIs, isAdmin, sameSite, json, clean, AGENTS, sd, tenant, tenantForEmail, saveTenant, audit, partner } from "../lib/core.mjs";
 
 const view = (t) => ({
   id: t.id, business: t.business, ownerName: t.ownerName, status: t.status, statusNote: t.status === "active" ? "" : "Your account is paused. Please contact WebSwan Digital Solutions.",
@@ -16,7 +16,12 @@ export default async (req) => {
   const t = isAdmin(who) && b.as ? await tenant(clean(b.as, 20)) : await tenantForEmail(who);
   if (!t) return json(403, { error: isAdmin(who) ? "Pick a client in the admin page, then use 'View as client'." : "This Google account isn't connected to a SwanDesk workspace yet. Please contact WebSwan Digital Solutions." });
 
-  if (b.action === "me") return json(200, { workspace: view(t), admin: isAdmin(who) });
+  if (b.action === "me") {
+    // A partner's customers get a button back to the partner's platform (name and link only; partner prices are never sent here).
+    const p = await partner(t.billing && t.billing.partnerId);
+    const link = p && p.status !== "ended" && p.linkUrl ? { name: p.name, url: p.linkUrl, label: p.linkLabel || ("Open " + p.name) } : null;
+    return json(200, { workspace: view(t), admin: isAdmin(who), partnerLink: link });
+  }
 
   if (b.action === "request") {
     if (!AGENTS[b.agent]) return json(400, { error: "Unknown agent." });

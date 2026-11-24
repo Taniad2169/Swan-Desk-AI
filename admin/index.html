@@ -32,12 +32,19 @@
       <div class="f"><label for="nJ">Jennifer's minute plan</label><select id="nJ"></select></div>
       <div class="f"><label>Price</label><div id="nPrice" class="muted"></div></div>
     </div>
+    <div class="f"><label for="nPt">Comes from</label><select id="nPt"></select></div>
     <button class="btn" id="nGo">Create client workspace</button>
   </section>
 
   <section class="card"><h2>👥 Clients</h2><div id="list"><p class="muted">Loading…</p></div></section>
 
   <section class="card"><h2>💲 Prices</h2><div id="prices"></div></section>
+
+  <section class="card"><h2>🤝 B2B partners <span class="muted">(private: only you see this)</span></h2>
+    <p class="muted">A partner pays WebSwan one monthly fee for its customers' SwanDesk workspaces. Same SwanDesk, with each customer's workspace kept separate. <b>All partner prices are drafts until you approve Clara's numbers.</b></p>
+    <div id="partners"></div>
+    <details id="pNewBox"><summary class="btn ghost sm" style="display:inline-block">➕ New partner</summary><div id="pNew"></div></details>
+  </section>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -68,7 +75,7 @@ function priceText(agents, term, jplan) {
 function drawNew() {
   $("nA").innerHTML = Object.entries(D.agents).map(([k, a]) => `<label class="switch" style="margin-right:14px;font-weight:600"><input type="checkbox" class="nAg" value="${k}"> ${esc(a.name)} <span class="muted">(${money(D.pricing.agent[k])})</span></label>`).join("");
   $("nT").innerHTML = Object.entries(D.pricing.terms).map(([k, t]) => `<option value="${k}">${esc(t.label)}${t.off ? " (" + Math.round(t.off * 100) + "% off)" : ""}</option>`).join("");
-  $("nJ").innerHTML = jplanOpts("standard");
+  $("nJ").innerHTML = jplanOpts("standard"); $("nPt").innerHTML = partnerOpts("");
   const upd = () => $("nPrice").innerHTML = priceText([...document.querySelectorAll(".nAg:checked")].map((c) => c.value), $("nT").value, $("nJ").value);
   document.querySelectorAll(".nAg").forEach((c) => c.onchange = upd); $("nT").onchange = upd; $("nJ").onchange = upd; upd();
 }
@@ -88,7 +95,8 @@ function clientCard(c) {
       <div class="f"><label>Jennifer's minute plan</label><select class="jplan">${jplanOpts(c.billing.jplan)}</select></div>
       <div class="f"><label>Paid through</label><input type="date" class="paid" value="${esc(c.billing.paidThrough)}"></div>
       <div class="f"><label>Setup fee (${money(c.setupFee)})</label><label class="switch"><input type="checkbox" class="setup" ${c.billing.setupPaid ? "checked" : ""}> ${c.billing.setupPaid ? "Paid" : "Not paid"}</label></div>
-      <div class="f"><label>Price</label><div class="muted"><b>${money(c.monthly)}/month</b>${c.billing.term !== "monthly" ? ` · ${money(c.termTotal)} per ${esc(D.pricing.terms[c.billing.term].label.toLowerCase())}` : ""}</div></div>
+      <div class="f"><label>Comes from</label><select class="ptn">${partnerOpts(c.partnerId)}</select></div>
+      <div class="f"><label>Price</label><div class="muted">${c.partnerId ? `<b>Billed to partner ${esc(pName(c.partnerId))}</b><br>Retail would be ` : ""}<b>${money(c.monthly)}/month</b>${c.billing.term !== "monthly" ? ` · ${money(c.termTotal)} per ${esc(D.pricing.terms[c.billing.term].label.toLowerCase())}` : ""}</div></div>
     </div>
     <p style="margin:6px 0 0"><button class="btn sm save">Save billing</button> <a class="btn ghost sm" href="../?as=${c.id}" target="_blank" rel="noopener">👁 View as client</a> <button class="btn ghost sm log">History</button></p>
     <div class="logbox muted" hidden></div></div>`;
@@ -100,7 +108,7 @@ function drawList() {
     const act = async (body) => { try { await SD.api("sd-admin", Object.assign({ id }, body)); toast("Saved"); load(); } catch (e) { toast(e.message); load(); } };
     card.querySelector(".acc").onchange = (e) => { if (!e.target.checked && !confirm("Turn this account OFF for non-payment? All of their agents stop until you turn it back on.")) { e.target.checked = true; return; } act({ action: "account", on: e.target.checked }); };
     card.querySelectorAll(".ag").forEach((s) => s.onchange = () => act({ action: "agent", agent: s.dataset.a, state: s.value }));
-    card.querySelector(".save").onclick = () => act({ action: "update", billing: { term: card.querySelector(".term").value, jplan: card.querySelector(".jplan").value, paidThrough: card.querySelector(".paid").value, setupPaid: card.querySelector(".setup").checked } });
+    card.querySelector(".save").onclick = () => act({ action: "update", billing: { term: card.querySelector(".term").value, jplan: card.querySelector(".jplan").value, paidThrough: card.querySelector(".paid").value, setupPaid: card.querySelector(".setup").checked, partnerId: card.querySelector(".ptn").value } });
     card.querySelector(".log").onclick = async () => { const box = card.querySelector(".logbox"); if (!box.hidden) return box.hidden = true; const r = await SD.api("sd-admin", { action: "audit", id }); box.innerHTML = r.log.map((l) => `${esc(new Date(l.at).toLocaleString())} · ${esc(l.who)} · <b>${esc(l.action)}</b> ${esc(l.detail)}`).join("<br>") || "No history yet."; box.hidden = false; };
   });
 }
@@ -122,10 +130,61 @@ function drawPrices() {
     try { D.pricing = (await SD.api("sd-admin", { action: "pricing", pricing })).pricing; toast("Prices saved"); drawNew(); load(); } catch (e) { toast(e.message); }
   };
 }
-async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); } catch (e) { toast(e.message); } }
+
+// ---------- B2B partners (private) ----------
+const partnerOpts = (sel) => `<option value="">WebSwan direct client (retail prices)</option>` + (D.partners || []).map((p) => `<option value="${esc(p.id)}" ${p.id === sel ? "selected" : ""}>Partner: ${esc(p.name)}</option>`).join("");
+const pName = (id) => ((D.partners || []).find((p) => p.id === id) || {}).name || "";
+function partnerForm(p) {
+  const v = p || D.partnerDefaults, id = p ? p.id : "";
+  const sel = (cls, opts, cur) => `<select class="${cls}">${opts.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+  const n = (cls, val, step) => `<input type="number" min="0" step="${step || 1}" class="${cls}" value="${val}">`;
+  return `<div class="pform" data-pid="${esc(id)}">
+    <div class="row"><div class="f"><label>Company name</label><input class="pName" value="${esc(v.name || "")}" placeholder="AI Sales Agent"></div>
+      <div class="f"><label>Contact</label><input class="pContact" value="${esc(v.contact || "")}" placeholder="Name, email"></div>
+      <div class="f"><label>Status</label>${sel("pStatus", [["draft", "Draft (talking)"], ["pilot", "Pilot (90 days)"], ["active", "Active"], ["ended", "Ended"]], v.status)}</div>
+      <div class="f"><label>Pilot ends</label><input type="date" class="pEnds" value="${esc(v.pilotEnds || "")}"></div></div>
+    <div class="row"><div class="f"><label>Deal type</label>${sel("pPlan", [["managed", "Managed: WebSwan pays the call minutes"], ["byo", "Bring your own: partner connects its own phone provider"]], v.plan)}</div>
+      <div class="f"><label>Phone minutes paid by</label>${sel("pPhone", [["webswan", "WebSwan"], ["partner", "Partner (their Twilio or other)"]], v.phonePaidBy)}</div>
+      <div class="f"><label>AI voice minutes paid by</label>${sel("pVoice", [["webswan", "WebSwan (my Cartesia)"], ["partner", "Partner (their own voice AI account)"]], v.voicePaidBy)}</div></div>
+    <div class="row"><div class="f"><label>Monthly fee $</label>${n("pFee", v.monthlyFee)}</div><div class="f"><label>Clients included</label>${n("pInc", v.includedClients)}</div>
+      <div class="f"><label>Each extra client $</label>${n("pAfter", v.perClientAfter)}</div><div class="f"><label>Minutes per client</label>${n("pMin", v.minutes)}</div>
+      <div class="f"><label>Extra minute $</label>${n("pOv", v.overage, 0.01)}</div><div class="f"><label>Setup per client $</label>${n("pSetup", v.setup)}</div></div>
+    <div class="row"><div class="f"><label>Add-on Eva $/client</label>${n("pAeva", v.addons.eva)}</div><div class="f"><label>Add-on Rosie $/client</label>${n("pAstan", v.addons.stan)}</div><div class="f"><label>Add-on Jonathan $/client</label>${n("pAjonathan", v.addons.jonathan)}</div></div>
+    <details><summary class="muted">Worst-case costs used for the margin check</summary><div class="row">
+      <div class="f"><label>Phone $/min</label>${n("pCphonePerMin", v.cost.phonePerMin, 0.0001)}</div><div class="f"><label>AI voice $/min</label>${n("pCvoicePerMin", v.cost.voicePerMin, 0.0001)}</div>
+      <div class="f"><label>Phone number $/client</label>${n("pCnumber", v.cost.number, 0.01)}</div><div class="f"><label>Eva $/client</label>${n("pCeva", v.cost.eva)}</div><div class="f"><label>Rosie $/client</label>${n("pCstan", v.cost.stan)}</div><div class="f"><label>Jonathan $/client</label>${n("pCjonathan", v.cost.jonathan)}</div>
+      <div class="f"><label>Fixed $/month (Cartesia plan, Netlify, support)</label>${n("pCfixed", v.cost.fixed)}</div><div class="f"><label>Card fee (0.03 = 3%)</label>${n("pCcard", v.cost.card, 0.001)}</div></div></details>
+    <div class="row"><div class="f"><label>Their platform link (button for their customers)</label><input class="pLink" value="${esc(v.linkUrl || "")}" placeholder="https://..."></div>
+      <div class="f"><label>Button text</label><input class="pLabel" value="${esc(v.linkLabel || "")}" placeholder="Open my outbound sales agent"></div>
+      <div class="f"><label>Their website</label><input class="pWeb" value="${esc(v.website || "")}" placeholder="https://..."></div></div>
+    <div class="f"><label>Notes</label><input class="pNotes" value="${esc(v.notes || "")}"></div>
+    <p><button class="btn sm pSave">${p ? "Save partner" : "Create partner"}</button></p></div>`;
+}
+function readPartner(box) {
+  const q = (c) => box.querySelector("." + c).value;
+  const out = { id: box.dataset.pid, name: q("pName"), contact: q("pContact"), status: q("pStatus"), pilotEnds: q("pEnds"), plan: q("pPlan"), phonePaidBy: q("pPhone"), voicePaidBy: q("pVoice"),
+    monthlyFee: q("pFee"), includedClients: q("pInc"), perClientAfter: q("pAfter"), minutes: q("pMin"), overage: q("pOv"), setup: q("pSetup"),
+    addons: { eva: q("pAeva"), stan: q("pAstan"), jonathan: q("pAjonathan") }, cost: {}, linkUrl: q("pLink"), linkLabel: q("pLabel"), website: q("pWeb"), notes: q("pNotes") };
+  for (const k of Object.keys(D.partnerDefaults.cost)) out.cost[k] = q("pC" + k);
+  return out;
+}
+function drawPartners() {
+  const back = location.origin + "/";
+  $("partners").innerHTML = (D.partners || []).map((p) => { const iv = p.invoice, ok = (m) => m >= 50 ? `<b style="color:var(--ok)">${m}% ✅</b>` : `<b style="color:var(--bad)">${m}% ❌ under 50%</b>`;
+    return `<div class="card" style="margin:10px 0"><div class="row" style="align-items:center"><div><b style="font-size:1.05rem">${esc(p.name)}</b> <span class="pill">${esc(p.status)}</span> <span class="muted">· ${p.plan === "byo" ? "Bring your own phone" : "Managed minutes"}${p.pilotEnds ? " · pilot ends " + esc(p.pilotEnds) : ""}</span><br>
+      <span class="muted">${iv.clients} client workspace(s) · bill this month <b>${money(iv.monthly)}</b>${iv.extraClients ? ` (incl. ${iv.extraClients} extra)` : ""}${iv.setupDue ? ` · setup due ${money(iv.setupDue)}` : ""}</span><br>
+      <span class="muted">WebSwan margin, worst case: today ${ok(iv.marginNow)} · when all ${Math.max(iv.clients, p.includedClients)} included clients use all their minutes ${ok(iv.marginFull)}</span><br>
+      <span class="muted">Link for their platform (button to SwanDesk): <code>${esc(back)}</code></span></div></div>
+      <details><summary class="btn ghost sm" style="display:inline-block">Edit deal</summary>${partnerForm(p)}</details></div>`; }).join("") || '<p class="muted">No partners yet.</p>';
+  $("pNew").innerHTML = partnerForm(null);
+  document.querySelectorAll(".pform").forEach((box) => box.querySelector(".pSave").onclick = async () => {
+    try { await SD.api("sd-admin", { action: "partner_save", partner: readPartner(box) }); toast("Partner saved"); $("pNewBox").open = false; load(); } catch (e) { toast(e.message); }
+  });
+}
+async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); drawPartners(); } catch (e) { toast(e.message); } }
 $("nGo").onclick = async () => {
   const agents = [...document.querySelectorAll(".nAg:checked")].map((c) => c.value);
-  try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value, jplan: $("nJ").value });
+  try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value, jplan: $("nJ").value, partnerId: $("nPt").value });
     toast("Client created ✅"); ["nB", "nO", "nP", "nE"].forEach((i) => $(i).value = ""); document.querySelectorAll(".nAg").forEach((c) => c.checked = false); drawNew(); load(); } catch (e) { toast(e.message); }
 };
 $("inBtn").onclick = () => SD.signIn().catch((e) => $("gateMsg").textContent = e.message);
@@ -133,7 +192,7 @@ $("outBtn").onclick = () => SD.signOut();
 window.addEventListener("sd-auth", async (e) => {
   const u = e.detail.user; $("outBtn").hidden = !u; $("who").textContent = u ? u.email : "";
   if (!u) { $("gate").hidden = false; $("app").hidden = true; return; }
-  try { D = await SD.api("sd-admin", { action: "list" }); $("gate").hidden = true; $("app").hidden = false; drawReqs(); drawList(); drawNew(); drawPrices(); }
+  try { D = await SD.api("sd-admin", { action: "list" }); $("gate").hidden = true; $("app").hidden = false; drawReqs(); drawList(); drawNew(); drawPrices(); drawPartners(); }
   catch (x) { $("gate").hidden = false; $("app").hidden = true; $("gateMsg").textContent = x.message; }
 });
 </script>

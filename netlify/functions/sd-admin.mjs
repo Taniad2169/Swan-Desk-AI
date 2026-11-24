@@ -1,11 +1,12 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
 import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
-  sd, tenants, tenant, saveTenant, newTenant, audit } from "../lib/core.mjs";
+  sd, tenants, tenant, saveTenant, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS } from "../lib/core.mjs";
+import crypto from "node:crypto";
 
 function summary(t, pricing) {
   const on = Object.keys(AGENTS).filter((a) => t.agents[a] && t.agents[a].state !== "locked");
   const p = priceFor(on, pricing, t.billing.jplan);
-  return { ...t, licensed: on, monthly: p.monthly, setupFee: p.setup, termTotal: termTotal(p.monthly, t.billing.term, pricing) };
+  return { ...t, licensed: on, monthly: p.monthly, setupFee: p.setup, termTotal: termTotal(p.monthly, t.billing.term, pricing), partnerId: t.billing.partnerId || "" };
 }
 
 export default async (req) => {
@@ -20,7 +21,8 @@ export default async (req) => {
     const all = [];
     for (const x of await tenants()) { const t = await tenant(x.id); if (t) all.push(summary(t, pricing)); }
     const reqs = (await sd().get("upgrade-requests", { type: "json" })) || [];
-    return json(200, { clients: all, agents: AGENTS, states: AGENT_STATES, pricing, requests: reqs.filter((r) => !r.done).slice(0, 100) });
+    const parts = (await partners()).map((x) => { const pp = withPartnerDefaults(x); return { ...pp, invoice: partnerInvoice(pp, all.filter((c) => c.partnerId === pp.id)) }; });
+    return json(200, { clients: all, agents: AGENTS, states: AGENT_STATES, pricing, requests: reqs.filter((r) => !r.done).slice(0, 100), partners: parts, partnerDefaults: PARTNER_DEFAULTS });
   }
 
   if (b.action === "create") {
@@ -33,8 +35,33 @@ export default async (req) => {
     for (const a of Object.keys(AGENTS)) if ((b.agents || []).includes(a)) t.agents[a] = { state: "active", since: new Date().toISOString() };
     if (PRICING_TERMS(pricing).includes(b.term)) t.billing.term = b.term;
     if (JPLANS.includes(b.jplan)) t.billing.jplan = b.jplan;
+    if (b.partnerId && (await partners()).some((x) => x.id === b.partnerId)) t.billing.partnerId = b.partnerId;
     await saveTenant(t); await audit(t.id, who, "created", `${t.business}; agents: ${(b.agents || []).join(", ") || "none"}`);
     return json(200, { client: summary(t, pricing) });
+  }
+
+  // B2B partners: create or update a partner deal (prices stay drafts until the CEO approves).
+  if (b.action === "partner_save") {
+    const list = await partners(), x = b.partner || {};
+    let p = list.find((q) => q.id === x.id);
+    if (!p) { p = { id: crypto.randomBytes(5).toString("hex"), createdAt: new Date().toISOString() }; list.push(p); }
+    const name = clean(x.name, 80); if (!name) return json(400, { error: "Add the partner's company name." });
+    const num = (v, d, max) => { const n = Number(v); return v !== "" && v != null && n >= 0 && n <= max ? Math.round(n * 10000) / 10000 : d; };
+    const url = (v) => { const u = clean(v, 300); try { return u && new URL(u).protocol === "https:" ? u : ""; } catch { return ""; } };
+    const d = withPartnerDefaults(p);
+    Object.assign(p, {
+      name, contact: clean(x.contact, 120), website: url(x.website), linkUrl: url(x.linkUrl), linkLabel: clean(x.linkLabel, 60), notes: clean(x.notes, 800),
+      status: ["draft", "pilot", "active", "ended"].includes(x.status) ? x.status : d.status, plan: ["managed", "byo"].includes(x.plan) ? x.plan : d.plan,
+      phonePaidBy: ["webswan", "partner"].includes(x.phonePaidBy) ? x.phonePaidBy : d.phonePaidBy, voicePaidBy: ["webswan", "partner"].includes(x.voicePaidBy) ? x.voicePaidBy : d.voicePaidBy,
+      pilotEnds: /^\d{4}-\d{2}-\d{2}$/.test(x.pilotEnds || "") ? x.pilotEnds : "",
+      monthlyFee: num(x.monthlyFee, d.monthlyFee, 100000), includedClients: Math.round(num(x.includedClients, d.includedClients, 1000)), perClientAfter: num(x.perClientAfter, d.perClientAfter, 10000),
+      minutes: Math.round(num(x.minutes, d.minutes, 100000)), overage: num(x.overage, d.overage, 5), setup: num(x.setup, d.setup, 10000),
+      addons: Object.fromEntries(Object.keys(d.addons).map((a) => [a, num((x.addons || {})[a], d.addons[a], 10000)])),
+      cost: Object.fromEntries(Object.keys(d.cost).map((k) => [k, num((x.cost || {})[k], d.cost[k], 100000)])),
+      updatedAt: new Date().toISOString()
+    });
+    await sd().setJSON("partners", list); await audit("", who, "partner", `${p.name}: ${p.status}, ${p.plan}, $${p.monthlyFee}/mo for ${p.includedClients} clients`);
+    return json(200, { ok: true, id: p.id });
   }
 
   const t = await tenant(clean(b.id, 20));
@@ -69,6 +96,8 @@ export default async (req) => {
       if (typeof b.billing.setupPaid === "boolean") t.billing.setupPaid = b.billing.setupPaid;
       if (/^\d{4}-\d{2}-\d{2}$/.test(b.billing.paidThrough || "")) t.billing.paidThrough = b.billing.paidThrough;
       if (typeof b.billing.notes === "string") t.billing.notes = clean(b.billing.notes, 500);
+      if (b.billing.partnerId === "") t.billing.partnerId = "";
+      else if (b.billing.partnerId && (await partners()).some((x) => x.id === b.billing.partnerId)) t.billing.partnerId = b.billing.partnerId;
     }
     await saveTenant(t); await audit(t.id, who, "updated", "details / billing");
     return json(200, { client: summary(t, pricing) });

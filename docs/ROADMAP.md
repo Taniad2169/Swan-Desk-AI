@@ -82,3 +82,11 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - CEO dashboard: per-client revenue, usage, estimated cost, PROFIT MARGIN with a flag when an account falls below the 50% target, payment status.
 - HIPAA: signed BAAs and security controls with every vendor before medical clients use SwanDesk with patient information.
 - Public pricing table lives on /demo/#pricing (customer prices only; costs and margins never public).
+
+
+## B2B partners (built Nov 24, 2026, private admin only)
+- One SwanDesk code base; a partner's customers are normal client workspaces tagged with the partner (separate data per client).
+- Partner record: status (draft/pilot/active/ended), deal type (managed minutes or bring-your-own phone), who pays phone minutes and AI voice minutes, monthly fee, clients included, extra-client fee, minutes per client, overage, setup, add-on prices, link button to the partner's platform.
+- Admin shows the partner's monthly bill and WebSwan's worst-case margin (red under 50%). Partner prices are never sent to client pages.
+- All partner prices are drafts until the CEO approves Clara's numbers and an attorney reviews the agreement (Jonathan's checklist).
+- Still to build: per-client usage tracking, partner portal, connecting a partner's own phone provider.
