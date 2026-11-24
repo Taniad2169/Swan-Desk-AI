@@ -2,7 +2,7 @@
 
 A WebSwan Digital Solutions platform: one smart desk with four AI agents for small businesses.
 
-- **Jennifer**: receptionist (inbound calls) and appointment setter (warm outbound calls only). Minute plans: Lite 600 min $249, Standard 1,500 min $349, Pro 4,000 min $649; inbound and outbound share the minutes; extra minutes $0.20.
+- **Jennifer**: receptionist (inbound calls) and appointment setter (warm outbound calls only). Minute plans: Lite 600 min $249, Standard 1,500 min $349, Pro 3,000 min $649; inbound and outbound share the minutes; extra minutes $0.25.
 - **Eva**: executive assistant and researcher (inbox briefing, drafts for approval, follow-ups, about 40 deep-research reports a month).
 - **Rosie** (code key `stan`): social media, Google Business Profile and graphic designer; designs and publishes posts straight to the client's own accounts after approval (Zernio-style posting API, not Tania's Content360).
 - **Jonathan** ("Legal Eagle"): legal and compliance assistant. Doctors: document, legal-letter and website review for compliance, rule updates, policy drafts, and a referral to consult an attorney when needed. Attorneys: legal assistant for document review, court prep, case presentations, legal letters and deep research. AI assistant, not a lawyer; no legal advice.

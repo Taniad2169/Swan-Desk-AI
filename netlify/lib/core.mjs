@@ -15,11 +15,11 @@ export const AGENTS = {
 export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
 // Prices (USD per month), approved by Tania with Clara's review (Nov 23, 2026). Setup: 1-2 agents $299, 3 agents $499, all 4 $599.
-// Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute.
+// Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute. Minimum margin: 50% at worst-case cost.
 export const PRICING = {
   agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
-  jplans: { lite: { label: "Lite", minutes: 600, price: 249 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 4000, price: 649 } },
-  overage: 0.20, proUpgrade: 300,
+  jplans: { lite: { label: "Lite", minutes: 600, price: 249 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
+  overage: 0.25, proUpgrade: 300,  // Tania's rule: at least 50% margin even at worst-case outbound cost
   bundle: { 2: 549, 3: 799, 4: 949 },
   setup: { 1: 299, 2: 299, 3: 499, 4: 599 },
   terms: { monthly: { months: 1, off: 0, label: "Monthly" }, quarterly: { months: 3, off: 0.05, label: "Every 3 months" }, semiannual: { months: 6, off: 0.10, label: "Every 6 months" }, annual: { months: 12, off: 0.15, label: "Once a year" } }
