@@ -18,7 +18,7 @@ export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 // Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute. Minimum margin: 50% at worst-case cost.
 export const PRICING = {
   agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
-  jplans: { lite: { label: "Lite", minutes: 600, price: 249 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
+  jplans: { lite: { label: "Lite", minutes: 600, price: 299 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
   overage: 0.25, proUpgrade: 300,  // Tania's rule: at least 50% margin even at worst-case outbound cost
   bundle: { 2: 549, 3: 799, 4: 949 },
   setup: { 1: 299, 2: 299, 3: 499, 4: 599 },

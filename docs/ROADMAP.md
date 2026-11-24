@@ -70,3 +70,4 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - Clara: lowest safe prices Jennifer Lite $89 / Standard $189 / Pro $429, Eva $119, Jonathan $159, Rosie $99; fixed costs about $134/month; one Full Desk client covers them.
 - Before launch (Gips): usage metering, automatic billing, alerts at 75/90/100%, client allowance dashboard, HIPAA BAAs with every vendor used for doctor clients.
 - UPDATE Nov 23, 11:25 PM: Tania's rule is a 50% minimum margin even at worst-case cost (outbound calling about $0.10/min + 10% AI reserve + fixed share + 3% card fees). Jennifer Pro changed to 3,000 minutes at $649 (51%; 4,000 minutes would need $849) and extra minutes to $0.25 (59%). Every other price already clears 50%.
+- UPDATE Nov 23, 11:28 PM: Jennifer Lite raised to $299 (600 min) because she does both inbound and outbound; worst-case margin about 75%.
