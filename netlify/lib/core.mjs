@@ -131,7 +131,7 @@ export async function audit(tenantId, who, action, detail) {
 // (Twilio etc.) and pays its own minutes; WebSwan charges a platform fee. "license": one-time license fee + monthly hosting & maintenance;
 // the partner connects its own phone, voice AI and AI brain accounts (Eva, Jonathan, Rosie) and sells to its own customers. All numbers are DRAFTS until the CEO approves Clara's numbers.
 export const PARTNER_DEFAULTS = {
-  status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 299, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
+  status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 499, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
   addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
   // Cost assumptions are private: they live in the SD_PARTNER_COSTS environment variable on Netlify, not in this (public) code.
   cost: { phonePerMin: 0, voicePerMin: 0, number: 0, eva: 0, stan: 0, jonathan: 0, fixed: 0, hosting: 0, card: 0, ...(() => { try { return JSON.parse(process.env.SD_PARTNER_COSTS || "{}"); } catch { return {}; } })() }
