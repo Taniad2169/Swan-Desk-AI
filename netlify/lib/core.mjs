@@ -85,24 +85,39 @@ export function sameSite(req) {
 export const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 
 // ---------- clients (tenants) ----------
-export async function tenants() { return (await sd().get("tenants", { type: "json" })) || []; }
+// Capacity: every client is its own record ("t-<id>") plus one small key per sign-in email ("email-<...>" -> client id).
+// There is no shared list file, so many clients saving at the same moment can't overwrite each other.
+const emailKey = (e) => "email-" + Buffer.from(String(e).toLowerCase()).toString("base64url");
+export async function tenantIds() {
+  const ids = []; for await (const page of sd().list({ prefix: "t-", paginate: true })) for (const b of page.blobs) ids.push(b.key.slice(2));
+  return ids;
+}
+export async function tenants() {
+  const out = [];
+  for (const id of await tenantIds()) { const t = await tenant(id); if (t) out.push(t); }
+  return out.sort((a, b) => String(a.business).localeCompare(String(b.business)));
+}
 // Agents added after a client was created (e.g. Jonathan) show up as "locked" (not on their plan) instead of missing.
 export async function tenant(id) {
-  const t = id ? await sd().get("t-" + id, { type: "json" }) : null;
-  if (t) { t.agents = t.agents || {}; for (const a of Object.keys(AGENTS)) if (!t.agents[a]) t.agents[a] = { state: "locked", since: new Date().toISOString() }; }
+  const t = id && /^[a-f0-9]{6,32}$/.test(id) ? await sd().get("t-" + id, { type: "json" }) : null;
+  if (t) { t.agents = t.agents || {}; t.billing = t.billing || {}; for (const a of Object.keys(AGENTS)) if (!t.agents[a]) t.agents[a] = { state: "locked", since: new Date().toISOString() }; }
   return t;
 }
-export async function saveTenant(t) {
+// Which client an email belongs to (fast path), falling back to the older shared list for clients created before Nov 24, 2026.
+export async function emailOwner(email) {
+  const id = await sd().get(emailKey(email), { type: "text" }).catch(() => null);
+  if (id) return id;
+  const legacy = (await sd().get("tenants", { type: "json" }).catch(() => null)) || [];
+  const hit = legacy.find((x) => (x.emails || []).includes(String(email).toLowerCase()));
+  return hit ? hit.id : null;
+}
+export async function saveTenant(t, oldEmails) {
   t.updatedAt = new Date().toISOString();
   await sd().setJSON("t-" + t.id, t);
-  const list = (await tenants()).filter((x) => x.id !== t.id);
-  list.push({ id: t.id, business: t.business, status: t.status, emails: t.emails });
-  await sd().setJSON("tenants", list.sort((a, b) => a.business.localeCompare(b.business)));
+  for (const e of t.emails || []) await sd().set(emailKey(e), t.id);
+  for (const e of oldEmails || []) if (!(t.emails || []).includes(e) && (await sd().get(emailKey(e), { type: "text" })) === t.id) await sd().delete(emailKey(e));
 }
-export async function tenantForEmail(email) {
-  const hit = (await tenants()).find((t) => (t.emails || []).includes(email));
-  return hit ? tenant(hit.id) : null;
-}
+export async function tenantForEmail(email) { const id = await emailOwner(email); return id ? tenant(id) : null; }
 // What an agent may do right now: only if the account is in good standing AND the agent is active.
 export function agentAllowed(t, agent) {
   return !!t && t.status === "active" && t.agents && t.agents[agent] && t.agents[agent].state === "active";
@@ -131,6 +146,7 @@ export async function audit(tenantId, who, action, detail) {
 // (Twilio etc.) and pays its own minutes; WebSwan charges a platform fee. "license": one-time license fee + monthly hosting & maintenance;
 // the partner connects its own phone, voice AI and AI brain accounts (Eva, Jonathan, Rosie) and sells to its own customers. All numbers are DRAFTS until the CEO approves Clara's numbers.
 export const PARTNER_DEFAULTS = {
+  edition: "voice", maxClients: 25, admins: [],
   status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 499, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
   addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
   // Cost assumptions are private: they live in the SD_PARTNER_COSTS environment variable on Netlify, not in this (public) code.
@@ -198,3 +214,13 @@ export async function saveVault(pid, input) {
   await sd().setJSON("vault-" + pid, v);
   return vaultView(v);
 }
+
+// ---------- partner admins (the licensee's own staff) ----------
+// Editions: "voice" = Partner Voice Edition (Jennifer only; Eva, Jonathan and Rosie are upgrades WebSwan turns on),
+// "enterprise" = SwanDesk AI Enterprise (all 4 agents + WorkPilot Business Edition).
+export const EDITION_AGENTS = { voice: ["jennifer"], enterprise: Object.keys(AGENTS) };
+export async function partnerForAdmin(email) {
+  const e = String(email).toLowerCase();
+  return (await partners()).find((p) => (p.admins || []).includes(e) && p.status !== "ended") || null;
+}
+export async function partnerClients(pid) { return (await tenants()).filter((t) => t.billing && t.billing.partnerId === pid); }

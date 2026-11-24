@@ -2,9 +2,10 @@
 // A client can pause/resume an ACTIVE agent they own; they can never unlock a locked or suspended one.
 import { whoIs, isAdmin, sameSite, json, clean, AGENTS, sd, tenant, tenantForEmail, saveTenant, audit, partner } from "../lib/core.mjs";
 
-const view = (t) => ({
+// Partner Voice Edition customers only see Jennifer, plus any upgrade agent that was switched on for them.
+const view = (t, p) => ({
   id: t.id, business: t.business, ownerName: t.ownerName, status: t.status, statusNote: t.status === "active" ? "" : "Your account is paused. Please contact WebSwan Digital Solutions.",
-  agents: Object.fromEntries(Object.entries(AGENTS).map(([k, a]) => [k, { ...a, state: t.status === "active" ? t.agents[k].state : (t.agents[k].state === "locked" ? "locked" : "suspended") }]))
+  agents: Object.fromEntries(Object.entries(AGENTS).filter(([k]) => !(p && p.edition === "voice" && k !== "jennifer" && t.agents[k].state === "locked")).map(([k, a]) => [k, { ...a, state: t.status === "active" ? t.agents[k].state : (t.agents[k].state === "locked" ? "locked" : "suspended") }]))
 });
 
 export default async (req) => {
@@ -16,11 +17,11 @@ export default async (req) => {
   const t = isAdmin(who) && b.as ? await tenant(clean(b.as, 20)) : await tenantForEmail(who);
   if (!t) return json(403, { error: isAdmin(who) ? "Pick a client in the admin page, then use 'View as client'." : "This Google account isn't connected to a SwanDesk workspace yet. Please contact WebSwan Digital Solutions." });
 
+  const p = await partner(t.billing && t.billing.partnerId);
   if (b.action === "me") {
     // A partner's customers get a button back to the partner's platform (name and link only; partner prices are never sent here).
-    const p = await partner(t.billing && t.billing.partnerId);
     const link = p && p.status !== "ended" && p.linkUrl ? { name: p.name, url: p.linkUrl, label: p.linkLabel || ("Open " + p.name) } : null;
-    return json(200, { workspace: view(t), admin: isAdmin(who), partnerLink: link });
+    return json(200, { workspace: view(t, p), admin: isAdmin(who), partnerLink: link, offeredBy: p && p.status !== "ended" ? p.name : "" });
   }
 
   if (b.action === "request") {
@@ -40,7 +41,7 @@ export default async (req) => {
     if (b.action === "resume" && a.state !== "paused") return json(403, { error: "Only a paused agent can be resumed." });
     t.agents[b.agent] = { state: b.action === "pause" ? "paused" : "active", since: new Date().toISOString() };
     await saveTenant(t); await audit(t.id, who, b.action, AGENTS[b.agent].name);
-    return json(200, { workspace: view(t) });
+    return json(200, { workspace: view(t, p) });
   }
   return json(400, { error: "Unknown action." });
 };

@@ -26,7 +26,7 @@
   <section class="grid3" id="agents"></section>
   <section class="card" id="plink" hidden style="margin-top:16px;text-align:center"></section>
 </main>
-<footer>SwanDesk AI · A WebSwan Digital Solutions platform</footer>
+<footer>SwanDesk AI <span id="offered"></span>· Powered by The WebSwan</footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -67,7 +67,7 @@ window.addEventListener("sd-auth", async (e) => {
   const u = e.detail.user;
   $("outBtn").hidden = !u; $("who").textContent = u ? u.email : "";
   if (!u) { $("gate").hidden = false; $("app").hidden = true; return; }
-  try { const me = await SD.api("sd-client", { action: "me", as }); W = me.workspace; $("gate").hidden = true; $("app").hidden = false; draw(); drawLink(me.partnerLink); }
+  try { const me = await SD.api("sd-client", { action: "me", as }); W = me.workspace; $("gate").hidden = true; $("app").hidden = false; draw(); drawLink(me.partnerLink); if (me.offeredBy) $("offered").textContent = "· offered by " + me.offeredBy + " "; }
   catch (x) { $("gate").hidden = false; $("app").hidden = true; $("gateMsg").textContent = x.message; }
 });
 </script>

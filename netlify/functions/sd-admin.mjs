@@ -1,6 +1,6 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
 import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
-  sd, tenants, tenant, saveTenant, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault } from "../lib/core.mjs";
+  sd, tenants, tenant, saveTenant, emailOwner, EDITION_AGENTS, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault } from "../lib/core.mjs";
 import crypto from "node:crypto";
 
 function summary(t, pricing) {
@@ -19,7 +19,7 @@ export default async (req) => {
 
   if (b.action === "list") {
     const all = [];
-    for (const x of await tenants()) { const t = await tenant(x.id); if (t) all.push(summary(t, pricing)); }
+    for (const t of await tenants()) all.push(summary(t, pricing));
     const reqs = (await sd().get("upgrade-requests", { type: "json" })) || [];
     const parts = (await partners()).map((x) => { const pp = withPartnerDefaults(x); return { ...pp, invoice: partnerInvoice(pp, all.filter((c) => c.partnerId === pp.id)) }; });
     return json(200, { clients: all, agents: AGENTS, states: AGENT_STATES, pricing, requests: reqs.filter((r) => !r.done).slice(0, 100), partners: parts, partnerDefaults: PARTNER_DEFAULTS, connections: CONNECTIONS });
@@ -30,8 +30,7 @@ export default async (req) => {
     if (!t.business) return json(400, { error: "Add the business name." });
     t.emails = (Array.isArray(b.emails) ? b.emails : String(b.emails || "").split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
     if (!t.emails.length) return json(400, { error: "Add at least one Google email the client will sign in with." });
-    const taken = (await tenants()).find((x) => (x.emails || []).some((e) => t.emails.includes(e)));
-    if (taken) return json(400, { error: "That email already belongs to " + taken.business + "." });
+    for (const e of t.emails) { const id = await emailOwner(e); if (id) { const o = await tenant(id); return json(400, { error: e + " already belongs to " + (o ? o.business : "another client") + "." }); } }
     for (const a of Object.keys(AGENTS)) if ((b.agents || []).includes(a)) t.agents[a] = { state: "active", since: new Date().toISOString() };
     if (PRICING_TERMS(pricing).includes(b.term)) t.billing.term = b.term;
     if (JPLANS.includes(b.jplan)) t.billing.jplan = b.jplan;
@@ -55,6 +54,8 @@ export default async (req) => {
       agentsPaidBy: ["webswan", "partner"].includes(x.agentsPaidBy) ? x.agentsPaidBy : d.agentsPaidBy, licensePaid: x.licensePaid === true,
       licenseFee: num(x.licenseFee, d.licenseFee, 1000000), hostingFee: num(x.hostingFee, d.hostingFee, 100000),
       phonePaidBy: ["webswan", "partner"].includes(x.phonePaidBy) ? x.phonePaidBy : d.phonePaidBy, voicePaidBy: ["webswan", "partner"].includes(x.voicePaidBy) ? x.voicePaidBy : d.voicePaidBy,
+      edition: ["voice", "enterprise"].includes(x.edition) ? x.edition : d.edition, maxClients: Math.round(num(x.maxClients, d.maxClients, 100000)),
+      admins: (Array.isArray(x.admins) ? x.admins : String(x.admins || "").split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 20),
       pilotEnds: /^\d{4}-\d{2}-\d{2}$/.test(x.pilotEnds || "") ? x.pilotEnds : "",
       monthlyFee: num(x.monthlyFee, d.monthlyFee, 100000), includedClients: Math.round(num(x.includedClients, d.includedClients, 1000)), perClientAfter: num(x.perClientAfter, d.perClientAfter, 10000),
       minutes: Math.round(num(x.minutes, d.minutes, 100000)), overage: num(x.overage, d.overage, 5), setup: num(x.setup, d.setup, 10000),
@@ -98,9 +99,8 @@ export default async (req) => {
     for (const k of ["business", "industry", "ownerName", "phone", "timezone"]) if (typeof b[k] === "string") t[k] = clean(b[k], 120);
     if (b.emails != null) {
       const em = (Array.isArray(b.emails) ? b.emails : String(b.emails).split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
-      const clash = (await tenants()).find((x) => x.id !== t.id && (x.emails || []).some((e) => em.includes(e)));
-      if (clash) return json(400, { error: "An email already belongs to " + clash.business + "." });
-      if (em.length) t.emails = em;
+      for (const e of em) { const id = await emailOwner(e); if (id && id !== t.id) return json(400, { error: e + " already belongs to another client." }); }
+      if (em.length) { b._old = t.emails; t.emails = em; }
     }
     if (b.billing) {
       if (PRICING_TERMS(pricing).includes(b.billing.term)) t.billing.term = b.billing.term;
@@ -111,7 +111,7 @@ export default async (req) => {
       if (b.billing.partnerId === "") t.billing.partnerId = "";
       else if (b.billing.partnerId && (await partners()).some((x) => x.id === b.billing.partnerId)) t.billing.partnerId = b.billing.partnerId;
     }
-    await saveTenant(t); await audit(t.id, who, "updated", "details / billing");
+    await saveTenant(t, b._old); await audit(t.id, who, "updated", "details / billing");
     return json(200, { client: summary(t, pricing) });
   }
   if (b.action === "audit") return json(200, { log: ((await sd().get("audit-" + t.id, { type: "json" })) || []).slice(0, 200) });

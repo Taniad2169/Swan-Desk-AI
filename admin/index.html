@@ -143,6 +143,9 @@ function partnerForm(p) {
       <div class="f"><label>Contact</label><input class="pContact" value="${esc(v.contact || "")}" placeholder="Name, email"></div>
       <div class="f"><label>Status</label>${sel("pStatus", [["draft", "Draft (talking)"], ["pilot", "Pilot (90 days)"], ["active", "Active"], ["ended", "Ended"]], v.status)}</div>
       <div class="f"><label>Pilot ends</label><input type="date" class="pEnds" value="${esc(v.pilotEnds || "")}"></div></div>
+    <div class="row"><div class="f"><label>Edition</label>${sel("pEd", [["voice", "Partner Voice Edition (Jennifer only)"], ["enterprise", "Enterprise (all 4 agents + WorkPilot)"]], v.edition)}</div>
+      <div class="f"><label>Customer workspace limit (0 = no limit)</label>${n("pMax", v.maxClients)}</div>
+      <div class="f"><label>Partner staff emails (they sign in to the partner portal)</label><input class="pAdmins" value="${esc((v.admins || []).join(", "))}" placeholder="owner@theircompany.com"></div></div>
     <div class="row"><div class="f"><label>Deal type</label>${sel("pPlan", [["license", "License: one-time license + monthly hosting"], ["byo", "Platform fee: they bring their own phone & AI"], ["managed", "Managed: WebSwan pays the call minutes"]], v.plan)}</div>
       <div class="f"><label>Phone minutes paid by</label>${sel("pPhone", [["webswan", "WebSwan"], ["partner", "Partner (their Twilio or other)"]], v.phonePaidBy)}</div>
       <div class="f"><label>AI voice minutes paid by</label>${sel("pVoice", [["webswan", "WebSwan (my Cartesia)"], ["partner", "Partner (their own voice AI account)"]], v.voicePaidBy)}</div>
@@ -166,7 +169,7 @@ function partnerForm(p) {
 }
 function readPartner(box) {
   const q = (c) => box.querySelector("." + c).value;
-  const out = { id: box.dataset.pid, name: q("pName"), contact: q("pContact"), status: q("pStatus"), pilotEnds: q("pEnds"), plan: q("pPlan"), phonePaidBy: q("pPhone"), voicePaidBy: q("pVoice"), agentsPaidBy: q("pAgents"), licenseFee: q("pLic"), licensePaid: box.querySelector(".pLicPaid").checked, hostingFee: q("pHost"),
+  const out = { id: box.dataset.pid, name: q("pName"), contact: q("pContact"), status: q("pStatus"), edition: q("pEd"), maxClients: q("pMax"), admins: q("pAdmins"), pilotEnds: q("pEnds"), plan: q("pPlan"), phonePaidBy: q("pPhone"), voicePaidBy: q("pVoice"), agentsPaidBy: q("pAgents"), licenseFee: q("pLic"), licensePaid: box.querySelector(".pLicPaid").checked, hostingFee: q("pHost"),
     monthlyFee: q("pFee"), includedClients: q("pInc"), perClientAfter: q("pAfter"), minutes: q("pMin"), overage: q("pOv"), setup: q("pSetup"),
     addons: { eva: q("pAeva"), stan: q("pAstan"), jonathan: q("pAjonathan") }, cost: {}, linkUrl: q("pLink"), linkLabel: q("pLabel"), website: q("pWeb"), notes: q("pNotes") };
   for (const k of Object.keys(D.partnerDefaults.cost)) out.cost[k] = q("pC" + k);
@@ -178,7 +181,8 @@ function drawPartners() {
     return `<div class="card" style="margin:10px 0"><div class="row" style="align-items:center"><div><b style="font-size:1.05rem">${esc(p.name)}</b> <span class="pill">${esc(p.status)}</span> <span class="muted">· ${p.plan === "license" ? "License" : p.plan === "byo" ? "Platform fee, their own phone & AI" : "Managed minutes"}${p.pilotEnds ? " · pilot ends " + esc(p.pilotEnds) : ""}</span><br>
       <span class="muted">${iv.clients} client workspace(s) · bill this month <b>${money(iv.monthly)}</b>${iv.extraClients ? ` (incl. ${iv.extraClients} extra)` : ""}${iv.setupDue ? ` · setup due ${money(iv.setupDue)}` : ""}${iv.licenseDue ? ` · <b>license due ${money(iv.licenseDue)}</b>` : p.plan === "license" ? " · license paid ✅" : ""}</span><br>
       <span class="muted">WebSwan margin, worst case: today ${ok(iv.marginNow)} · when all ${Math.max(iv.clients, p.includedClients)} included clients use all their minutes ${ok(iv.marginFull)}</span><br>
-      <span class="muted">Link for their platform (button to SwanDesk): <code>${esc(back)}</code></span></div></div>
+      <span class="muted">${p.edition === "enterprise" ? "Enterprise" : "Partner Voice Edition"} · workspace limit ${p.maxClients || "none"} · portal staff: ${esc((p.admins || []).join(", ") || "none yet")}</span><br>
+      <span class="muted">Link for their platform (button to SwanDesk): <code>${esc(back)}</code> · their portal: <code>${esc(back)}partner/</code> <a class="btn ghost sm" href="../partner/?as=${esc(p.id)}" target="_blank" rel="noopener">👁 View their portal</a></span></div></div>
       <details><summary class="btn ghost sm" style="display:inline-block">Edit deal</summary>${partnerForm(p)}</details>
       <details class="vbox" data-vp="${esc(p.id)}"><summary class="btn ghost sm" style="display:inline-block">🔌 Their connections (phone, voice AI, AI keys)</summary><div class="vin muted">Loading…</div></details></div>`; }).join("") || '<p class="muted">No partners yet.</p>';
   $("pNew").innerHTML = partnerForm(null);

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwanDesk AI · Partner portal</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../img/ws-logo.png">
+<link rel="stylesheet" href="../style.css">
+<script type="module" src="../auth.js"></script>
+</head>
+<body>
+<header class="top"><img src="../img/ws-logo.png" alt="WebSwan"><div><h1>SwanDesk AI · Partner portal</h1><small>Powered by The WebSwan</small></div><span class="sp"></span>
+  <span id="who" style="font-size:.85rem"></span><button class="btn wh" id="outBtn" hidden>Sign out</button></header>
+
+<div id="gate" class="card gate"><h2>Partner sign in</h2><p class="muted">Sign in with the email The WebSwan registered for your company.</p><button class="btn" id="inBtn">Sign in with Google</button><p id="gateMsg" class="muted" role="alert"></p></div>
+
+<main class="wrap" id="app" hidden>
+  <section class="card"><h2 id="pName">Your SwanDesk license</h2><p class="muted" id="pInfo"></p></section>
+
+  <section class="card"><h2>➕ New customer workspace</h2>
+    <div class="row">
+      <div class="f"><label for="nB">Business name</label><input id="nB"></div>
+      <div class="f"><label for="nO">Owner name</label><input id="nO"></div>
+      <div class="f"><label for="nI">Industry</label><select id="nI"><option>Doctor</option><option>Lawyer</option><option>Realtor</option><option>Mortgage</option><option>Insurance</option><option>Accountant</option><option>Other</option></select></div>
+      <div class="f"><label for="nP">Business phone</label><input id="nP"></div>
+    </div>
+    <div class="f"><label for="nE">Email(s) the customer signs in with (comma separated)</label><input id="nE" placeholder="owner@practice.com"></div>
+    <div class="f"><label>Agents</label><div id="nA"></div></div>
+    <button class="btn" id="nGo">Create customer workspace</button>
+    <p class="muted">Your customer signs in at <code id="cUrl"></code> with that email.</p>
+  </section>
+
+  <section class="card"><h2>👥 Your customers</h2><div id="list"></div></section>
+
+  <section class="card"><h2>🔌 Your provider connections</h2>
+    <p class="muted">Your own phone, voice AI and AI accounts. Your company pays these providers directly. Keys are encrypted when saved and never shown again, only the last 4 characters. Leave a key box empty to keep the saved one.</p>
+    <div id="vault"></div></section>
+</main>
+<footer>SwanDesk AI · Powered by The WebSwan</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const toast = (t) => { const e = $("toast"); e.textContent = t; e.style.display = "block"; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = "none", 4000); };
+const as = new URLSearchParams(location.search).get("as") || "";
+const api = (body) => SD.api("sd-partner", Object.assign({ as }, body));
+const LABEL = { locked: "Off", active: "On", paused: "Paused", suspended: "Suspended" };
+let D = null;
+
+function draw() {
+  const p = D.partner;
+  $("pName").textContent = p.name + " · SwanDesk AI " + (p.edition === "enterprise" ? "Enterprise" : "Partner Voice Edition");
+  $("pInfo").innerHTML = `Customer workspaces: <b>${p.used}${p.maxClients ? " of " + p.maxClients : ""}</b>` + (as ? " · (You are viewing this as the partner.)" : "");
+  $("cUrl").textContent = location.origin + "/";
+  $("nA").innerHTML = Object.entries(D.agents).map(([k, a]) => a.included ? `<label class="switch" style="margin-right:14px;font-weight:600"><input type="checkbox" class="nAg" value="${k}" ${k === "jennifer" ? "checked" : ""}> ${esc(a.name)} <span class="muted">${esc(a.role)}</span></label>` : `<span class="muted" style="margin-right:14px">${esc(a.name)}: upgrade, ask The WebSwan</span>`).join("");
+  $("list").innerHTML = D.clients.length ? D.clients.map((c) => `<div class="card" style="margin:10px 0" data-id="${esc(c.id)}">
+    <div class="row" style="align-items:center"><div><b>${esc(c.business)}</b> <span class="muted">· ${esc(c.industry)} · ${esc(c.ownerName)}</span></div>
+      <div style="text-align:right"><label class="switch"><input type="checkbox" class="acc" ${c.status === "active" ? "checked" : ""}> ${c.status === "active" ? "Account ON" : "Account OFF"}</label></div></div>
+    <div class="row">${Object.entries(D.agents).map(([k, a]) => `<div class="f"><label>${esc(a.name)}</label>${a.included ? `<select class="ag" data-a="${k}">${["locked", "active", "paused"].map((s) => `<option value="${s}" ${c.agents[k] === s ? "selected" : ""}>${LABEL[s]}</option>`).join("")}</select>` : `<span class="muted">${c.agents[k] === "locked" ? "Upgrade" : LABEL[c.agents[k]] || c.agents[k]}</span>`}</div>`).join("")}</div>
+    <div class="row"><div class="f"><label>Sign-in emails</label><input class="em" value="${esc(c.emails.join(", "))}"></div><div class="f" style="align-self:end"><button class="btn ghost sm saveEm">Save emails</button></div></div></div>`).join("") : '<p class="muted">No customers yet.</p>';
+  document.querySelectorAll("[data-id]").forEach((card) => {
+    const id = card.dataset.id, act = async (body) => { try { await api(Object.assign({ id }, body)); toast("Saved"); load(); } catch (e) { toast(e.message); load(); } };
+    card.querySelector(".acc").onchange = (e) => act({ action: "account", on: e.target.checked });
+    card.querySelectorAll(".ag").forEach((s) => s.onchange = () => act({ action: "agent", agent: s.dataset.a, state: s.value }));
+    card.querySelector(".saveEm").onclick = () => act({ action: "update", emails: card.querySelector(".em").value });
+  });
+  drawVault(D.vault);
+}
+function drawVault(v) {
+  $("vault").innerHTML = Object.entries(D.connections).map(([k, c]) => { const cur = v[k] || {};
+    return `<div class="row vrow" data-k="${k}" style="align-items:end;border-bottom:1px solid var(--line);padding:6px 0"><div class="f"><label>${esc(c.label)}</label><select class="vprov"><option value="">Not connected</option>${c.providers.map((pr) => `<option ${pr === cur.provider ? "selected" : ""}>${esc(pr)}</option>`).join("")}</select></div>
+    ${Object.entries(c.fields).map(([f, l]) => `<div class="f"><label>${esc(l)}</label><input class="vf" data-f="${f}" ${f === "secret" ? 'type="password" autocomplete="new-password"' : ""} placeholder="${esc(f === "secret" ? (cur[f] || "paste key") : "")}" value="${f === "secret" ? "" : esc(cur[f] || "")}"></div>`).join("")}
+    <div class="f">${cur.updatedAt ? `<span class="muted">saved ${esc(new Date(cur.updatedAt).toLocaleDateString())}</span><br><button class="btn ghost sm vclr">Remove</button>` : ""}</div></div>`; }).join("") + `<p><button class="btn sm" id="vSave">Save connections</button></p>`;
+  const send = async (vault) => { try { const r = await api({ action: "vault_save", vault }); toast("Connections saved 🔒"); D.vault = r.vault; drawVault(r.vault); } catch (e) { toast(e.message); } };
+  $("vSave").onclick = () => { const vault = {}; document.querySelectorAll(".vrow").forEach((r) => { const x = { provider: r.querySelector(".vprov").value }; r.querySelectorAll(".vf").forEach((i) => x[i.dataset.f] = i.value); vault[r.dataset.k] = x; }); send(vault); };
+  document.querySelectorAll(".vclr").forEach((b) => b.onclick = () => { if (confirm("Remove this connection and its saved key?")) send({ [b.closest(".vrow").dataset.k]: { clear: true } }); });
+}
+async function load() { try { D = await api({ action: "me" }); draw(); } catch (e) { toast(e.message); } }
+$("nGo").onclick = async () => {
+  try { await api({ action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents: [...document.querySelectorAll(".nAg:checked")].map((c) => c.value) });
+    toast("Customer workspace created ✅"); ["nB", "nO", "nP", "nE"].forEach((i) => $(i).value = ""); load(); } catch (e) { toast(e.message); }
+};
+$("inBtn").onclick = () => SD.signIn().catch((e) => $("gateMsg").textContent = e.message);
+$("outBtn").onclick = () => SD.signOut();
+window.addEventListener("sd-auth", async (e) => {
+  const u = e.detail.user; $("outBtn").hidden = !u; $("who").textContent = u ? u.email : "";
+  if (!u) { $("gate").hidden = false; $("app").hidden = true; return; }
+  try { D = await api({ action: "me" }); $("gate").hidden = true; $("app").hidden = false; draw(); }
+  catch (x) { $("gate").hidden = false; $("app").hidden = true; $("gateMsg").textContent = x.message; }
+});
+</script>
+</body>
+</html>
