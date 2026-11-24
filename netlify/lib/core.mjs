@@ -128,12 +128,13 @@ export async function audit(tenantId, who, action, detail) {
 // ---------- B2B partners (PRIVATE: admin only) ----------
 // One SwanDesk code base. A partner (e.g. an outbound-only AI sales company) pays WebSwan one monthly fee for its customers' workspaces.
 // "managed": WebSwan pays the voice AI and phone minutes (minute cap per client). "byo": the partner connects its own phone provider
-// (Twilio etc.) and pays its own minutes; WebSwan charges a platform fee. All numbers are DRAFTS until the CEO approves Clara's numbers.
+// (Twilio etc.) and pays its own minutes; WebSwan charges a platform fee. "license": one-time license fee + monthly hosting & maintenance;
+// the partner connects its own phone, voice AI and AI brain accounts (Eva, Jonathan, Rosie) and sells to its own customers. All numbers are DRAFTS until the CEO approves Clara's numbers.
 export const PARTNER_DEFAULTS = {
-  status: "draft", plan: "managed", monthlyFee: 1999, includedClients: 10, perClientAfter: 199, minutes: 600, overage: 0.2, setup: 299,
-  addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "webswan", voicePaidBy: "webswan", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
+  status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 299, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
+  addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
   // Worst-case cost assumptions for the margin check (editable). Phone = carrier + telephony; voice = AI voice agent + AI brain reserve.
-  cost: { phonePerMin: 0.0365, voicePerMin: 0.06, number: 1.15, eva: 60, stan: 45, jonathan: 80, fixed: 234, card: 0.03 }
+  cost: { phonePerMin: 0.0365, voicePerMin: 0.06, number: 1.15, eva: 60, stan: 45, jonathan: 80, fixed: 234, hosting: 50, card: 0.03 }
 };
 export async function partners() { return (await sd().get("partners", { type: "json" })) || []; }
 export async function partner(id) { return id ? (await partners()).find((p) => p.id === id) || null : null; }
@@ -147,13 +148,53 @@ export function partnerInvoice(p, clients) {
   const n = clients.length, extra = Math.max(0, n - p.includedClients);
   const addon = { eva: 0, stan: 0, jonathan: 0 };
   for (const c of clients) for (const a of Object.keys(addon)) if (c.agents && c.agents[a] && c.agents[a].state !== "locked") addon[a]++;
-  const addonTotal = Object.keys(addon).reduce((t, a) => t + addon[a] * p.addons[a], 0);
-  const monthly = (n || p.status !== "ended" ? p.monthlyFee : 0) + extra * p.perClientAfter + addonTotal;
+  const ownAgents = p.agentsPaidBy === "partner";
+  const addonTotal = ownAgents ? 0 : Object.keys(addon).reduce((t, a) => t + addon[a] * p.addons[a], 0);
+  if (ownAgents) for (const a of Object.keys(addon)) addon[a] = 0;
+  const base = p.plan === "license" ? p.hostingFee : p.monthlyFee;
+  const monthly = (n || p.status !== "ended" ? base : 0) + extra * p.perClientAfter + addonTotal;
+  const licenseDue = p.plan === "license" && !p.licensePaid ? p.licenseFee : 0;
   const setupDue = clients.filter((c) => !(c.billing && c.billing.setupPaid)).length * p.setup;
-  const k = p.cost, perMin = (p.phonePaidBy === "webswan" ? k.phonePerMin : 0) + (p.voicePaidBy === "webswan" ? k.voicePerMin : 0);
+  const k = p.cost, fixedCost = p.voicePaidBy === "webswan" ? k.fixed : k.hosting, perMin = (p.phonePaidBy === "webswan" ? k.phonePerMin : 0) + (p.voicePaidBy === "webswan" ? k.voicePerMin : 0);
   const billed = Math.max(n, p.includedClients); // the flat fee is paid for the included clients even before they are all signed up
-  const cost = n * (p.minutes * perMin + (p.phonePaidBy === "webswan" ? k.number : 0)) + addon.eva * k.eva + addon.stan * k.stan + addon.jonathan * k.jonathan + k.fixed + monthly * k.card;
-  const fullCost = billed * (p.minutes * perMin + (p.phonePaidBy === "webswan" ? k.number : 0)) + addon.eva * k.eva + addon.stan * k.stan + addon.jonathan * k.jonathan + k.fixed + monthly * k.card;
+  const cost = n * (p.minutes * perMin + (p.phonePaidBy === "webswan" ? k.number : 0)) + addon.eva * k.eva + addon.stan * k.stan + addon.jonathan * k.jonathan + fixedCost + monthly * k.card;
+  const fullCost = billed * (p.minutes * perMin + (p.phonePaidBy === "webswan" ? k.number : 0)) + addon.eva * k.eva + addon.stan * k.stan + addon.jonathan * k.jonathan + fixedCost + monthly * k.card;
   const margin = (c) => monthly > 0 ? Math.round((1 - c / monthly) * 100) : 0;
-  return { clients: n, extraClients: extra, addons: addon, monthly, setupDue, costNow: Math.round(cost), costFull: Math.round(fullCost), marginNow: margin(cost), marginFull: margin(fullCost) };
+  return { clients: n, extraClients: extra, addons: addon, monthly, setupDue, licenseDue, costNow: Math.round(cost), costFull: Math.round(fullCost), marginNow: margin(cost), marginFull: margin(fullCost) };
+}
+
+// ---------- partner connections vault (their phone, voice AI and AI brain keys) ----------
+// Keys are encrypted (AES-256-GCM) with SD_VAULT_KEY before they are stored, and are never sent back to any page (only the last 4 characters).
+export const CONNECTIONS = {
+  phone: { label: "Phone provider", providers: ["Twilio", "Telnyx", "Plivo", "Vonage", "Other"], fields: { account: "Account SID / ID", secret: "Auth token / API key", numbers: "Phone numbers (comma separated)" } },
+  voice: { label: "Voice AI (Jennifer's voice)", providers: ["Cartesia", "Retell AI", "Vapi", "ElevenLabs", "Other"], fields: { secret: "API key", agent: "Agent / assistant ID" } },
+  brain: { label: "AI brain for Eva, Jonathan & Rosie", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
+  research: { label: "Research search (Eva & Jonathan)", providers: ["Perplexity", "Brave Search", "Other"], fields: { secret: "API key" } },
+  design: { label: "Graphics & posting (Rosie)", providers: ["Canva", "Content scheduler", "Other"], fields: { secret: "API key / token" } }
+};
+const SECRET = new Set(["secret"]);
+function vaultKey() { const k = process.env.SD_VAULT_KEY; if (!k || k.length < 24) throw new Error("vault key missing"); return crypto.createHash("sha256").update(k).digest(); }
+export function seal(text) { const iv = crypto.randomBytes(12), c = crypto.createCipheriv("aes-256-gcm", vaultKey(), iv); const enc = Buffer.concat([c.update(String(text), "utf8"), c.final()]); return [iv, c.getAuthTag(), enc].map((b) => b.toString("base64")).join("."); }
+export function unseal(box) { const [iv, tag, enc] = String(box).split(".").map((x) => Buffer.from(x, "base64")); const d = crypto.createDecipheriv("aes-256-gcm", vaultKey(), iv); d.setAuthTag(tag); return Buffer.concat([d.update(enc), d.final()]).toString("utf8"); }
+export async function vault(pid) { return (await sd().get("vault-" + pid, { type: "json" })) || {}; }
+// What pages may see: provider, non-secret fields, and only the last 4 characters of each secret.
+export function vaultView(v) {
+  return Object.fromEntries(Object.keys(CONNECTIONS).map((k) => { const c = v[k] || {}; const out = { provider: c.provider || "", updatedAt: c.updatedAt || "" };
+    for (const f of Object.keys(CONNECTIONS[k].fields)) out[f] = SECRET.has(f) ? (c[f] ? "••••" + (c[f + "4"] || "") : "") : (c[f] || ""); return [k, out]; }));
+}
+export async function saveVault(pid, input) {
+  const v = await vault(pid);
+  for (const k of Object.keys(CONNECTIONS)) {
+    const x = (input || {})[k]; if (!x) continue;
+    const c = v[k] || {};
+    if (x.clear) { delete v[k]; continue; }
+    if (CONNECTIONS[k].providers.includes(x.provider)) c.provider = x.provider;
+    for (const f of Object.keys(CONNECTIONS[k].fields)) {
+      const val = clean(x[f], 600); if (!val) continue;
+      if (SECRET.has(f)) { c[f] = seal(val); c[f + "4"] = val.slice(-4); } else c[f] = val;
+    }
+    c.updatedAt = new Date().toISOString(); v[k] = c;
+  }
+  await sd().setJSON("vault-" + pid, v);
+  return vaultView(v);
 }

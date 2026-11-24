@@ -143,17 +143,21 @@ function partnerForm(p) {
       <div class="f"><label>Contact</label><input class="pContact" value="${esc(v.contact || "")}" placeholder="Name, email"></div>
       <div class="f"><label>Status</label>${sel("pStatus", [["draft", "Draft (talking)"], ["pilot", "Pilot (90 days)"], ["active", "Active"], ["ended", "Ended"]], v.status)}</div>
       <div class="f"><label>Pilot ends</label><input type="date" class="pEnds" value="${esc(v.pilotEnds || "")}"></div></div>
-    <div class="row"><div class="f"><label>Deal type</label>${sel("pPlan", [["managed", "Managed: WebSwan pays the call minutes"], ["byo", "Bring your own: partner connects its own phone provider"]], v.plan)}</div>
+    <div class="row"><div class="f"><label>Deal type</label>${sel("pPlan", [["license", "License: one-time license + monthly hosting"], ["byo", "Platform fee: they bring their own phone & AI"], ["managed", "Managed: WebSwan pays the call minutes"]], v.plan)}</div>
       <div class="f"><label>Phone minutes paid by</label>${sel("pPhone", [["webswan", "WebSwan"], ["partner", "Partner (their Twilio or other)"]], v.phonePaidBy)}</div>
-      <div class="f"><label>AI voice minutes paid by</label>${sel("pVoice", [["webswan", "WebSwan (my Cartesia)"], ["partner", "Partner (their own voice AI account)"]], v.voicePaidBy)}</div></div>
-    <div class="row"><div class="f"><label>Monthly fee $</label>${n("pFee", v.monthlyFee)}</div><div class="f"><label>Clients included</label>${n("pInc", v.includedClients)}</div>
+      <div class="f"><label>AI voice minutes paid by</label>${sel("pVoice", [["webswan", "WebSwan (my Cartesia)"], ["partner", "Partner (their own voice AI account)"]], v.voicePaidBy)}</div>
+      <div class="f"><label>Eva, Jonathan & Rosie AI paid by</label>${sel("pAgents", [["webswan", "WebSwan (add-on prices below)"], ["partner", "Partner (their own AI keys)"]], v.agentsPaidBy)}</div></div>
+    <div class="row"><div class="f"><label>License fee (one time) $</label>${n("pLic", v.licenseFee)}</div>
+      <div class="f"><label>License paid?</label><label class="switch"><input type="checkbox" class="pLicPaid" ${v.licensePaid ? "checked" : ""}> Paid</label></div>
+      <div class="f"><label>Hosting & maintenance $/month (license deals)</label>${n("pHost", v.hostingFee)}</div></div>
+    <div class="row"><div class="f"><label>Monthly fee $ (platform / managed deals)</label>${n("pFee", v.monthlyFee)}</div><div class="f"><label>Clients included</label>${n("pInc", v.includedClients)}</div>
       <div class="f"><label>Each extra client $</label>${n("pAfter", v.perClientAfter)}</div><div class="f"><label>Minutes per client</label>${n("pMin", v.minutes)}</div>
       <div class="f"><label>Extra minute $</label>${n("pOv", v.overage, 0.01)}</div><div class="f"><label>Setup per client $</label>${n("pSetup", v.setup)}</div></div>
     <div class="row"><div class="f"><label>Add-on Eva $/client</label>${n("pAeva", v.addons.eva)}</div><div class="f"><label>Add-on Rosie $/client</label>${n("pAstan", v.addons.stan)}</div><div class="f"><label>Add-on Jonathan $/client</label>${n("pAjonathan", v.addons.jonathan)}</div></div>
     <details><summary class="muted">Worst-case costs used for the margin check</summary><div class="row">
       <div class="f"><label>Phone $/min</label>${n("pCphonePerMin", v.cost.phonePerMin, 0.0001)}</div><div class="f"><label>AI voice $/min</label>${n("pCvoicePerMin", v.cost.voicePerMin, 0.0001)}</div>
       <div class="f"><label>Phone number $/client</label>${n("pCnumber", v.cost.number, 0.01)}</div><div class="f"><label>Eva $/client</label>${n("pCeva", v.cost.eva)}</div><div class="f"><label>Rosie $/client</label>${n("pCstan", v.cost.stan)}</div><div class="f"><label>Jonathan $/client</label>${n("pCjonathan", v.cost.jonathan)}</div>
-      <div class="f"><label>Fixed $/month (Cartesia plan, Netlify, support)</label>${n("pCfixed", v.cost.fixed)}</div><div class="f"><label>Card fee (0.03 = 3%)</label>${n("pCcard", v.cost.card, 0.001)}</div></div></details>
+      <div class="f"><label>Fixed $/month when you pay the voice (Cartesia plan, Netlify, support)</label>${n("pCfixed", v.cost.fixed)}</div><div class="f"><label>Hosting & upkeep $/month when they bring their own voice</label>${n("pChosting", v.cost.hosting)}</div><div class="f"><label>Card fee (0.03 = 3%)</label>${n("pCcard", v.cost.card, 0.001)}</div></div></details>
     <div class="row"><div class="f"><label>Their platform link (button for their customers)</label><input class="pLink" value="${esc(v.linkUrl || "")}" placeholder="https://..."></div>
       <div class="f"><label>Button text</label><input class="pLabel" value="${esc(v.linkLabel || "")}" placeholder="Open my outbound sales agent"></div>
       <div class="f"><label>Their website</label><input class="pWeb" value="${esc(v.website || "")}" placeholder="https://..."></div></div>
@@ -162,7 +166,7 @@ function partnerForm(p) {
 }
 function readPartner(box) {
   const q = (c) => box.querySelector("." + c).value;
-  const out = { id: box.dataset.pid, name: q("pName"), contact: q("pContact"), status: q("pStatus"), pilotEnds: q("pEnds"), plan: q("pPlan"), phonePaidBy: q("pPhone"), voicePaidBy: q("pVoice"),
+  const out = { id: box.dataset.pid, name: q("pName"), contact: q("pContact"), status: q("pStatus"), pilotEnds: q("pEnds"), plan: q("pPlan"), phonePaidBy: q("pPhone"), voicePaidBy: q("pVoice"), agentsPaidBy: q("pAgents"), licenseFee: q("pLic"), licensePaid: box.querySelector(".pLicPaid").checked, hostingFee: q("pHost"),
     monthlyFee: q("pFee"), includedClients: q("pInc"), perClientAfter: q("pAfter"), minutes: q("pMin"), overage: q("pOv"), setup: q("pSetup"),
     addons: { eva: q("pAeva"), stan: q("pAstan"), jonathan: q("pAjonathan") }, cost: {}, linkUrl: q("pLink"), linkLabel: q("pLabel"), website: q("pWeb"), notes: q("pNotes") };
   for (const k of Object.keys(D.partnerDefaults.cost)) out.cost[k] = q("pC" + k);
@@ -171,15 +175,31 @@ function readPartner(box) {
 function drawPartners() {
   const back = location.origin + "/";
   $("partners").innerHTML = (D.partners || []).map((p) => { const iv = p.invoice, ok = (m) => m >= 50 ? `<b style="color:var(--ok)">${m}% ✅</b>` : `<b style="color:var(--bad)">${m}% ❌ under 50%</b>`;
-    return `<div class="card" style="margin:10px 0"><div class="row" style="align-items:center"><div><b style="font-size:1.05rem">${esc(p.name)}</b> <span class="pill">${esc(p.status)}</span> <span class="muted">· ${p.plan === "byo" ? "Bring your own phone" : "Managed minutes"}${p.pilotEnds ? " · pilot ends " + esc(p.pilotEnds) : ""}</span><br>
-      <span class="muted">${iv.clients} client workspace(s) · bill this month <b>${money(iv.monthly)}</b>${iv.extraClients ? ` (incl. ${iv.extraClients} extra)` : ""}${iv.setupDue ? ` · setup due ${money(iv.setupDue)}` : ""}</span><br>
+    return `<div class="card" style="margin:10px 0"><div class="row" style="align-items:center"><div><b style="font-size:1.05rem">${esc(p.name)}</b> <span class="pill">${esc(p.status)}</span> <span class="muted">· ${p.plan === "license" ? "License" : p.plan === "byo" ? "Platform fee, their own phone & AI" : "Managed minutes"}${p.pilotEnds ? " · pilot ends " + esc(p.pilotEnds) : ""}</span><br>
+      <span class="muted">${iv.clients} client workspace(s) · bill this month <b>${money(iv.monthly)}</b>${iv.extraClients ? ` (incl. ${iv.extraClients} extra)` : ""}${iv.setupDue ? ` · setup due ${money(iv.setupDue)}` : ""}${iv.licenseDue ? ` · <b>license due ${money(iv.licenseDue)}</b>` : p.plan === "license" ? " · license paid ✅" : ""}</span><br>
       <span class="muted">WebSwan margin, worst case: today ${ok(iv.marginNow)} · when all ${Math.max(iv.clients, p.includedClients)} included clients use all their minutes ${ok(iv.marginFull)}</span><br>
       <span class="muted">Link for their platform (button to SwanDesk): <code>${esc(back)}</code></span></div></div>
-      <details><summary class="btn ghost sm" style="display:inline-block">Edit deal</summary>${partnerForm(p)}</details></div>`; }).join("") || '<p class="muted">No partners yet.</p>';
+      <details><summary class="btn ghost sm" style="display:inline-block">Edit deal</summary>${partnerForm(p)}</details>
+      <details class="vbox" data-vp="${esc(p.id)}"><summary class="btn ghost sm" style="display:inline-block">🔌 Their connections (phone, voice AI, AI keys)</summary><div class="vin muted">Loading…</div></details></div>`; }).join("") || '<p class="muted">No partners yet.</p>';
   $("pNew").innerHTML = partnerForm(null);
+  document.querySelectorAll(".vbox").forEach((box) => box.addEventListener("toggle", () => { if (box.open && !box.dataset.loaded) loadVault(box); }));
   document.querySelectorAll(".pform").forEach((box) => box.querySelector(".pSave").onclick = async () => {
     try { await SD.api("sd-admin", { action: "partner_save", partner: readPartner(box) }); toast("Partner saved"); $("pNewBox").open = false; load(); } catch (e) { toast(e.message); }
   });
+}
+// Partner connections: keys are encrypted on the server and only the last 4 characters ever come back.
+async function loadVault(box, v) {
+  try { if (!v) v = (await SD.api("sd-admin", { action: "vault_get", partnerId: box.dataset.vp })).vault; } catch (e) { box.querySelector(".vin").textContent = e.message; return; }
+  box.dataset.loaded = 1;
+  box.querySelector(".vin").innerHTML = `<p class="muted">Their own accounts. Keys are locked (encrypted) when saved and never shown again, only the last 4 characters. Leave a key box empty to keep the saved one.</p>` +
+    Object.entries(D.connections).map(([k, c]) => { const cur = v[k] || {};
+      return `<div class="row vrow" data-k="${k}" style="align-items:end;border-bottom:1px solid var(--line);padding:6px 0"><div class="f"><label>${esc(c.label)}</label><select class="vprov"><option value="">Not connected</option>${c.providers.map((pr) => `<option ${pr === cur.provider ? "selected" : ""}>${esc(pr)}</option>`).join("")}</select></div>
+      ${Object.entries(c.fields).map(([f, l]) => `<div class="f"><label>${esc(l)}</label><input class="vf" data-f="${f}" ${f === "secret" ? 'type="password" autocomplete="new-password"' : ""} placeholder="${esc(f === "secret" ? (cur[f] || "paste key") : "")}" value="${f === "secret" ? "" : esc(cur[f] || "")}"></div>`).join("")}
+      <div class="f">${cur.updatedAt ? `<span class="muted">saved ${esc(new Date(cur.updatedAt).toLocaleDateString())}</span><br><button class="btn ghost sm vclr">Remove</button>` : ""}</div></div>`; }).join("") +
+    `<p><button class="btn sm vsave">Save connections</button></p>`;
+  const send = async (vault) => { try { const r = await SD.api("sd-admin", { action: "vault_save", partnerId: box.dataset.vp, vault }); toast("Connections saved 🔒"); loadVault(box, r.vault); } catch (e) { toast(e.message); } };
+  box.querySelector(".vsave").onclick = () => { const vault = {}; box.querySelectorAll(".vrow").forEach((r) => { const x = { provider: r.querySelector(".vprov").value }; r.querySelectorAll(".vf").forEach((i) => x[i.dataset.f] = i.value); vault[r.dataset.k] = x; }); send(vault); };
+  box.querySelectorAll(".vclr").forEach((b) => b.onclick = () => { if (confirm("Remove this connection and its saved key?")) send({ [b.closest(".vrow").dataset.k]: { clear: true } }); });
 }
 async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); drawPartners(); } catch (e) { toast(e.message); } }
 $("nGo").onclick = async () => {

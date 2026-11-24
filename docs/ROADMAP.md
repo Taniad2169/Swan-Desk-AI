@@ -90,3 +90,5 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - Admin shows the partner's monthly bill and WebSwan's worst-case margin (red under 50%). Partner prices are never sent to client pages.
 - All partner prices are drafts until the CEO approves Clara's numbers and an attorney reviews the agreement (Jonathan's checklist).
 - Still to build: per-client usage tracking, partner portal, connecting a partner's own phone provider.
+- Nov 24, 2026: license deals added (CEO's idea): one-time license fee (draft $15,000) + hosting & maintenance (draft $299/month), or a $499/month platform fee with no license. The partner brings its own phone provider, voice AI and AI keys for Eva, Jonathan and Rosie. WebSwan hosts and maintains; the partner sells to its own customers. License = right to use the hosted service, never the source code.
+- Partner connections vault: their phone, voice AI, AI brain, research and design keys, encrypted with SD_VAULT_KEY (Netlify, production). Pages only see the last 4 characters. Next: make Jennifer, Eva, Jonathan and Rosie use the partner's keys for that partner's customers when the agent tools are built.

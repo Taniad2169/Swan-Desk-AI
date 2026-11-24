@@ -1,6 +1,6 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
 import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
-  sd, tenants, tenant, saveTenant, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS } from "../lib/core.mjs";
+  sd, tenants, tenant, saveTenant, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault } from "../lib/core.mjs";
 import crypto from "node:crypto";
 
 function summary(t, pricing) {
@@ -22,7 +22,7 @@ export default async (req) => {
     for (const x of await tenants()) { const t = await tenant(x.id); if (t) all.push(summary(t, pricing)); }
     const reqs = (await sd().get("upgrade-requests", { type: "json" })) || [];
     const parts = (await partners()).map((x) => { const pp = withPartnerDefaults(x); return { ...pp, invoice: partnerInvoice(pp, all.filter((c) => c.partnerId === pp.id)) }; });
-    return json(200, { clients: all, agents: AGENTS, states: AGENT_STATES, pricing, requests: reqs.filter((r) => !r.done).slice(0, 100), partners: parts, partnerDefaults: PARTNER_DEFAULTS });
+    return json(200, { clients: all, agents: AGENTS, states: AGENT_STATES, pricing, requests: reqs.filter((r) => !r.done).slice(0, 100), partners: parts, partnerDefaults: PARTNER_DEFAULTS, connections: CONNECTIONS });
   }
 
   if (b.action === "create") {
@@ -51,7 +51,9 @@ export default async (req) => {
     const d = withPartnerDefaults(p);
     Object.assign(p, {
       name, contact: clean(x.contact, 120), website: url(x.website), linkUrl: url(x.linkUrl), linkLabel: clean(x.linkLabel, 60), notes: clean(x.notes, 800),
-      status: ["draft", "pilot", "active", "ended"].includes(x.status) ? x.status : d.status, plan: ["managed", "byo"].includes(x.plan) ? x.plan : d.plan,
+      status: ["draft", "pilot", "active", "ended"].includes(x.status) ? x.status : d.status, plan: ["managed", "byo", "license"].includes(x.plan) ? x.plan : d.plan,
+      agentsPaidBy: ["webswan", "partner"].includes(x.agentsPaidBy) ? x.agentsPaidBy : d.agentsPaidBy, licensePaid: x.licensePaid === true,
+      licenseFee: num(x.licenseFee, d.licenseFee, 1000000), hostingFee: num(x.hostingFee, d.hostingFee, 100000),
       phonePaidBy: ["webswan", "partner"].includes(x.phonePaidBy) ? x.phonePaidBy : d.phonePaidBy, voicePaidBy: ["webswan", "partner"].includes(x.voicePaidBy) ? x.voicePaidBy : d.voicePaidBy,
       pilotEnds: /^\d{4}-\d{2}-\d{2}$/.test(x.pilotEnds || "") ? x.pilotEnds : "",
       monthlyFee: num(x.monthlyFee, d.monthlyFee, 100000), includedClients: Math.round(num(x.includedClients, d.includedClients, 1000)), perClientAfter: num(x.perClientAfter, d.perClientAfter, 10000),
@@ -62,6 +64,16 @@ export default async (req) => {
     });
     await sd().setJSON("partners", list); await audit("", who, "partner", `${p.name}: ${p.status}, ${p.plan}, $${p.monthlyFee}/mo for ${p.includedClients} clients`);
     return json(200, { ok: true, id: p.id });
+  }
+
+  // Partner connections: their own phone, voice AI and AI keys. Saved encrypted; pages only ever see the last 4 characters.
+  if (b.action === "vault_get" || b.action === "vault_save") {
+    const p = (await partners()).find((q) => q.id === b.partnerId); if (!p) return json(404, { error: "Partner not found." });
+    try {
+      if (b.action === "vault_get") return json(200, { vault: vaultView(await vault(p.id)) });
+      const view = await saveVault(p.id, b.vault); await audit("", who, "partner connections", `${p.name}: ${Object.keys(b.vault || {}).join(", ")}`);
+      return json(200, { vault: view });
+    } catch (e) { return json(500, { error: e.message === "vault key missing" ? "The vault key isn't set on Netlify yet." : "Could not save the connections." }); }
   }
 
   const t = await tenant(clean(b.id, 20));
