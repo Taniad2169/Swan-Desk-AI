@@ -24,6 +24,9 @@
 .steps{counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .steps div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
 .steps div::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;margin-bottom:6px}
+.ptab{width:100%;border-collapse:collapse;font-size:.92rem}.ptab th,.ptab td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.ptab th{background:#f1f6fc;color:var(--navy);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}.ptab td.pr{font-weight:800;color:var(--navy);white-space:nowrap}.ptab .sub{color:var(--muted);font-size:.84rem}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}.pbox{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fbfdff}.pbox.best{border:2px solid var(--blue);background:#f1f7ff}.pbox h3{margin:0 0 4px;font-size:1.02rem}.pbox .big{font-size:1.6rem;font-weight:800;color:var(--navy)}.pbox ul{margin:8px 0 0;padding-left:18px;font-size:.88rem}
+.ptwrap{overflow-x:auto}
 @media (max-width:820px){.hero .in{grid-template-columns:1fr}.hero h2{font-size:1.6rem}}
 </style>
 </head>
@@ -36,7 +39,7 @@
     <span class="demo-badge">Demo · see how it works</span>
     <h2 id="ht">One smart desk. Four AI teammates for your business.</h2>
     <p>Jennifer answers your calls, Eva keeps your inbox under control, Rosie runs your social media and Google Business, and Jonathan, your Legal Eagle, keeps your documents and website in compliance. You stay in control and turn each teammate on or off anytime.</p>
-    <div class="cta"><a class="btn" id="bookBtn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a><a class="btn wh" href="#team">Meet the team</a><a class="btn wh" href="hospitality/">🏠 Airbnb: click here to view</a></div>
+    <div class="cta"><a class="btn" id="bookBtn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a><a class="btn wh" href="#team">Meet the team</a><a class="btn wh" href="#pricing">💲 See pricing</a><a class="btn wh" href="hospitality/">🏠 Airbnb: click here to view</a></div>
     <p style="margin-top:14px">Questions about SwanDesk AI? Call Rachel at <a href="tel:+13162486839" style="color:#93e5fa;font-weight:700">(316) 248-6839</a></p>
   </div>
   <div class="vid" id="vidBox"><div class="soon">The SwanDesk AI video is coming here.</div></div>
@@ -78,6 +81,33 @@
     <div class="lock"><span>🔒 Demo only. Your own SwanDesk is set up after you sign up.</span></div>
   </section>
 
+
+  <section class="card" id="pricing" aria-labelledby="pt">
+    <h2 id="pt">💲 SwanDesk AI pricing</h2>
+    <p class="muted">Pick the teammates you need. Every price is per business, per month.</p>
+    <div class="ptwrap"><table class="ptab">
+      <thead><tr><th>Teammate</th><th>What they do</th><th>Plan</th><th>Price</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3"><b>Jennifer</b><div class="sub">Receptionist &amp; appointment setter</div></td><td rowspan="3">Answers your calls 24/7 (inbound) and calls back warm leads who asked to hear from you to book appointments (outbound). Inbound and outbound share your monthly minutes.</td><td>Lite · 600 minutes</td><td class="pr">$299/mo</td></tr>
+        <tr><td>Standard · 1,500 minutes <span class="sub">(most popular)</span></td><td class="pr">$349/mo</td></tr>
+        <tr><td>Pro · 3,000 minutes</td><td class="pr">$649/mo</td></tr>
+        <tr><td><b>Eva</b><div class="sub">Executive assistant &amp; researcher</div></td><td>Morning inbox briefing, email drafts for your OK, follow-ups, and deep research (about 40 research reports a month).</td><td>One plan</td><td class="pr">$249/mo</td></tr>
+        <tr><td><b>Jonathan</b> 🦅<div class="sub">Legal Eagle · legal &amp; compliance assistant</div></td><td>Doctors: document, legal-letter and website compliance review, rule updates and policy drafts. Attorneys: research, document review, court prep and legal letters. AI assistant, not a lawyer; no legal advice.</td><td>One plan</td><td class="pr">$299/mo</td></tr>
+        <tr><td><b>Rosie</b><div class="sub">Social media, Google Business &amp; graphic designer</div></td><td>About 30 branded posts a month for up to 5 social accounts plus your Google Business Profile, published to your accounts after you approve.</td><td>One plan</td><td class="pr">$249/mo</td></tr>
+      </tbody>
+    </table></div>
+    <div class="pgrid">
+      <div class="pbox"><h3>Any 2 teammates</h3><div class="big">up to $549<span class="sub">/mo</span></div><p class="sub">Never more than buying them separately.</p></div>
+      <div class="pbox"><h3>Any 3 teammates</h3><div class="big">up to $799<span class="sub">/mo</span></div><p class="sub">Never more than buying them separately.</p></div>
+      <div class="pbox best"><h3>⭐ Full Desk: all 4</h3><div class="big">$949<span class="sub">/mo</span></div><p class="sub">Jennifer, Eva, Jonathan and Rosie. Save $197 a month. With Jennifer Pro: $1,249/mo.</p></div>
+    </div>
+    <div class="pgrid">
+      <div class="pbox"><h3>One-time setup</h3><ul><li>1–2 teammates: $299</li><li>3 teammates: $499</li><li>All 4: $599</li></ul></div>
+      <div class="pbox"><h3>Pay ahead and save</h3><ul><li>Every 3 months: 5% off</li><li>Every 6 months: 10% off</li><li>Once a year: 15% off</li></ul></div>
+      <div class="pbox"><h3>You stay in control of your bill</h3><ul><li>See your minutes and usage live in your dashboard</li><li>Alerts at 75%, 90% and 100% of your plan</li><li>Set your own monthly spending limit</li><li>Extra Jennifer minutes: $0.25 each, only as you authorize at sign-up</li><li>Outbound calls pause at your limit; you choose whether inbound calls continue or forward to your office</li></ul></div>
+    </div>
+    <p class="sub" style="margin-top:10px">Bundles include Jennifer Standard; Jennifer Pro inside a bundle adds $300/month. Prices in USD, before applicable taxes.</p>
+  </section>
   <section class="card" style="text-align:center;border:2px solid var(--blue)">
     <h2>🏠 Airbnb &amp; vacation rental hosts</h2>
     <p class="muted">Watch Jennifer handle real guest calls: early check-in, a lost door code, a broken AC and a new owner lead.</p>

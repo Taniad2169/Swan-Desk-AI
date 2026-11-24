@@ -71,3 +71,14 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - Before launch (Gips): usage metering, automatic billing, alerts at 75/90/100%, client allowance dashboard, HIPAA BAAs with every vendor used for doctor clients.
 - UPDATE Nov 23, 11:25 PM: Tania's rule is a 50% minimum margin even at worst-case cost (outbound calling about $0.10/min + 10% AI reserve + fixed share + 3% card fees). Jennifer Pro changed to 3,000 minutes at $649 (51%; 4,000 minutes would need $849) and extra minutes to $0.25 (59%). Every other price already clears 50%.
 - UPDATE Nov 23, 11:28 PM: Jennifer Lite raised to $299 (600 min) because she does both inbound and outbound; worst-case margin about 75%.
+
+## Usage & billing (approved by Tania with Gips, Nov 23, 2026), to build next
+- Stripe: card saved at sign-up (Stripe keeps it; SwanDesk shows only the masked card and receipts), automatic monthly subscription, and overage billing the client explicitly authorizes at sign-up. Itemized monthly receipts. No duplicate charges; usage must be accurate; only admins change prices.
+- Usage tracking per client: Jennifer minutes (separate inbound and outbound counters, one shared allowance), Eva research reports (40), Jonathan document pages (200), Rosie branded posts (30).
+- Alerts (email + dashboard): 75% notice, 90% warning with upgrade options, 100%.
+- At 100%: outbound pauses automatically until the client authorizes more spending or upgrades. Inbound follows the client's own choice made at sign-up: keep answering at $0.25/min (up to their spending cap) OR forward calls to their office. Spending cap is set by the client.
+- End of billing cycle: Stripe charges the authorized overage automatically.
+- Client dashboard (Settings / Usage): plan, minutes used/left (inbound/outbound), % used, current overage, other agents' allowances.
+- CEO dashboard: per-client revenue, usage, estimated cost, PROFIT MARGIN with a flag when an account falls below the 50% target, payment status.
+- HIPAA: signed BAAs and security controls with every vendor before medical clients use SwanDesk with patient information.
+- Public pricing table lives on /demo/#pricing (customer prices only; costs and margins never public).
