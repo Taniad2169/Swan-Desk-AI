@@ -1,6 +1,6 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
 import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
-  sd, tenants, tenant, saveTenant, emailOwner, EDITION_AGENTS, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault } from "../lib/core.mjs";
+  sd, tenants, tenant, saveTenant, emailOwner, EDITION_AGENTS, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault, makeBackup, listBackups, restoreBackup, backups } from "../lib/core.mjs";
 import crypto from "node:crypto";
 
 function summary(t, pricing) {
@@ -65,6 +65,15 @@ export default async (req) => {
     });
     await sd().setJSON("partners", list); await audit("", who, "partner", `${p.name}: ${p.status}, ${p.plan}, $${p.monthlyFee}/mo for ${p.includedClients} clients`);
     return json(200, { ok: true, id: p.id });
+  }
+
+  // Backups: make one now, list them, download one, restore one (restore first takes a safety backup).
+  if (b.action === "backup_now") { const r = await makeBackup(clean(b.reason, 80) || "manual"); await audit("", who, "backup", `${r.key} · ${r.count} records · verified ${r.verified}`); return json(200, r); }
+  if (b.action === "backup_list") return json(200, { backups: (await listBackups()).slice(0, 60) });
+  if (b.action === "backup_get") { const raw = await backups().get(clean(b.key, 80), { type: "text" }); return raw ? new Response(raw, { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }) : json(404, { error: "Backup not found." }); }
+  if (b.action === "backup_restore") {
+    if (b.confirm !== "RESTORE") return json(400, { error: "Type RESTORE to confirm." });
+    try { const r = await restoreBackup(clean(b.key, 80)); await audit("", who, "restore", `${b.key} · ${r.restored} records · safety ${r.safety}`); return json(200, r); } catch (e) { return json(400, { error: e.message }); }
   }
 
   // Partner connections: their own phone, voice AI and AI keys. Saved encrypted; pages only ever see the last 4 characters.

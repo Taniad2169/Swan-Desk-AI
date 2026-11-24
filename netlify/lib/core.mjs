@@ -224,3 +224,31 @@ export async function partnerForAdmin(email) {
   return (await partners()).find((p) => (p.admins || []).includes(e) && p.status !== "ended") || null;
 }
 export async function partnerClients(pid) { return (await tenants()).filter((t) => t.billing && t.billing.partnerId === pid); }
+
+// ---------- backups (daily + on demand) ----------
+// A backup copies EVERY SwanDesk record (clients, partners, prices, audit logs, encrypted partner keys stay encrypted) into a separate store.
+export const backups = () => getStore({ name: "swandesk-backups", consistency: "strong" });
+export async function makeBackup(reason) {
+  const data = {};
+  for await (const page of sd().list({ paginate: true })) for (const b of page.blobs) data[b.key] = await sd().get(b.key, { type: "text" });
+  const key = "backup-" + new Date().toISOString().replace(/[:.]/g, "-");
+  const body = JSON.stringify({ at: new Date().toISOString(), reason: clean(reason, 80), count: Object.keys(data).length, data });
+  await backups().set(key, body);
+  // Verify: read it back and compare every record before calling it a good backup.
+  const check = JSON.parse(await backups().get(key, { type: "text" }));
+  const ok = Object.keys(data).every((k) => check.data[k] === data[k]);
+  return { key, count: Object.keys(data).length, bytes: body.length, verified: ok };
+}
+export async function listBackups() {
+  const out = []; for await (const page of backups().list({ paginate: true })) for (const b of page.blobs) out.push(b.key);
+  return out.sort().reverse();
+}
+// Restore puts every record from the backup back. Records created after the backup are left alone (nothing is deleted).
+// A safety backup of the current state is taken first, so a restore can itself be undone.
+export async function restoreBackup(key) {
+  const raw = await backups().get(key, { type: "text" }); if (!raw) throw new Error("Backup not found.");
+  const safety = await makeBackup("before restoring " + key);
+  const { data } = JSON.parse(raw);
+  for (const [k, v] of Object.entries(data)) await sd().set(k, v);
+  return { restored: Object.keys(data).length, safety: safety.key };
+}

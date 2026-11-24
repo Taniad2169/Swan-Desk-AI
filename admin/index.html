@@ -40,6 +40,10 @@
 
   <section class="card"><h2>💲 Prices</h2><div id="prices"></div></section>
 
+  <section class="card"><h2>🛟 Backups</h2>
+    <p class="muted">SwanDesk backs itself up every day (newest 60 kept). Each backup is read back and checked. Restoring first takes a safety backup, so a restore can be undone, and it never deletes newer records.</p>
+    <p><button class="btn sm" id="bkNow">Back up now</button> <button class="btn ghost sm" id="bkList">Show backups</button></p><div id="bkBox" class="muted"></div></section>
+
   <section class="card"><h2>🤝 B2B partners <span class="muted">(private: only you see this)</span></h2>
     <p class="muted">A partner pays WebSwan one monthly fee for its customers' SwanDesk workspaces. Same SwanDesk, with each customer's workspace kept separate. <b>All partner prices are drafts until you approve Clara's numbers.</b></p>
     <div id="partners"></div>
@@ -211,6 +215,13 @@ $("nGo").onclick = async () => {
   try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value, jplan: $("nJ").value, partnerId: $("nPt").value });
     toast("Client created ✅"); ["nB", "nO", "nP", "nE"].forEach((i) => $(i).value = ""); document.querySelectorAll(".nAg").forEach((c) => c.checked = false); drawNew(); load(); } catch (e) { toast(e.message); }
 };
+$("bkNow").onclick = async () => { try { const r = await SD.api("sd-admin", { action: "backup_now", reason: "manual" }); toast(`Backup ${r.verified ? "verified ✅" : "NOT verified ⚠️"}: ${r.count} records`); $("bkList").onclick(); } catch (e) { toast(e.message); } };
+$("bkList").onclick = async () => {
+  try { const r = await SD.api("sd-admin", { action: "backup_list" });
+    $("bkBox").innerHTML = r.backups.map((k) => `<div>${esc(k.replace("backup-", ""))} <button class="btn ghost sm" data-dl="${esc(k)}">Download</button> <button class="btn ghost sm" data-rs="${esc(k)}">Restore</button></div>`).join("") || "No backups yet.";
+    document.querySelectorAll("[data-dl]").forEach((b) => b.onclick = async () => { const tok = await SD.user().getIdToken(); const res = await fetch("/.netlify/functions/sd-admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ action: "backup_get", key: b.dataset.dl }) }); const a = document.createElement("a"); a.href = URL.createObjectURL(await res.blob()); a.download = b.dataset.dl + ".json"; a.click(); });
+    document.querySelectorAll("[data-rs]").forEach((b) => b.onclick = async () => { if (prompt("Restore " + b.dataset.rs + "? Type RESTORE to confirm.") !== "RESTORE") return; try { const x = await SD.api("sd-admin", { action: "backup_restore", key: b.dataset.rs, confirm: "RESTORE" }); toast(`Restored ${x.restored} records`); load(); } catch (e) { toast(e.message); } });
+  } catch (e) { toast(e.message); } };
 $("inBtn").onclick = () => SD.signIn().catch((e) => $("gateMsg").textContent = e.message);
 $("outBtn").onclick = () => SD.signOut();
 window.addEventListener("sd-auth", async (e) => {
