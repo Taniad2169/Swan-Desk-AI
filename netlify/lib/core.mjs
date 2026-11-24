@@ -111,11 +111,79 @@ export async function emailOwner(email) {
   const hit = legacy.find((x) => (x.emails || []).includes(String(email).toLowerCase()));
   return hit ? hit.id : null;
 }
-export async function saveTenant(t, oldEmails) {
-  t.updatedAt = new Date().toISOString();
-  await sd().setJSON("t-" + t.id, t);
+// Safe saving: a client record is only written if nobody else changed it since it was read (Netlify Blobs "onlyIfMatch").
+// If someone did, we read the fresh copy and apply the change again, so two changes at the same moment are both kept.
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+export async function updateTenant(id, change) {
+  for (let i = 0; i < 12; i++) {
+    const got = await sd().getWithMetadata("t-" + id, { type: "json" });
+    if (!got || !got.data) return null;
+    const t = got.data; t.agents = t.agents || {}; t.billing = t.billing || {};
+    for (const a of Object.keys(AGENTS)) if (!t.agents[a]) t.agents[a] = { state: "locked", since: new Date().toISOString() };
+    const oldEmails = [...(t.emails || [])];
+    const res = await change(t);
+    if (res && res.error) return res;
+    t.updatedAt = new Date().toISOString();
+    const w = await sd().setJSON("t-" + id, t, { onlyIfMatch: got.etag });
+    if (w && w.modified === false) { await pause(20 + Math.random() * 80 * (i + 1)); continue; }
+    await syncEmails(t, oldEmails);
+    return t;
+  }
+  throw new Error("busy");
+}
+// Claims a sign-in email for a client. "onlyIfNew" makes the claim atomic: two clients can never get the same email.
+export async function claimEmail(email, id) {
+  const k = emailKey(email);
+  const w = await sd().set(k, id, { onlyIfNew: true });
+  if (w && w.modified === false) return (await sd().get(k, { type: "text" })) === id;
+  return !(await legacyOwner(email, id));
+}
+async function legacyOwner(email, id) {
+  const legacy = (await sd().get("tenants", { type: "json" }).catch(() => null)) || [];
+  const hit = legacy.find((x) => x.id !== id && (x.emails || []).includes(String(email).toLowerCase()));
+  return hit ? hit.id : null;
+}
+async function syncEmails(t, oldEmails) {
   for (const e of t.emails || []) await sd().set(emailKey(e), t.id);
   for (const e of oldEmails || []) if (!(t.emails || []).includes(e) && (await sd().get(emailKey(e), { type: "text" })) === t.id) await sd().delete(emailKey(e));
+}
+// Brand-new client: claim every email first (atomic), then write the record only if it doesn't exist yet.
+export async function createTenant(t) {
+  const claimed = [];
+  for (const e of t.emails) { if (!(await claimEmail(e, t.id))) { for (const c of claimed) await sd().delete(emailKey(c)); return { error: e + " is already used by another SwanDesk workspace." }; } claimed.push(e); }
+  t.updatedAt = new Date().toISOString();
+  await sd().setJSON("t-" + t.id, t, { onlyIfNew: true });
+  return { ok: true };
+}
+export async function saveTenant(t, oldEmails) { // kept for older code paths; prefer updateTenant
+  t.updatedAt = new Date().toISOString();
+  await sd().setJSON("t-" + t.id, t);
+  await syncEmails(t, oldEmails);
+}
+// License seats: a partner's workspace count is reserved atomically, so 20 requests at once can't go past the limit.
+export async function reserveSeat(pid, limit, id) {
+  const key = "seats-" + pid;
+  for (let i = 0; i < 12; i++) {
+    let got = await sd().getWithMetadata(key, { type: "json" });
+    if (!got || !got.data) {
+      const ids = (await tenants()).filter((x) => x.billing && x.billing.partnerId === pid).map((x) => x.id);
+      const w = await sd().setJSON(key, { ids }, { onlyIfNew: true });
+      continue;
+    }
+    const ids = got.data.ids || [];
+    if (limit && ids.length >= limit) return false;
+    const w = await sd().setJSON(key, { ids: [...ids, id] }, { onlyIfMatch: got.etag });
+    if (w && w.modified === false) { await pause(20 + Math.random() * 80 * (i + 1)); continue; }
+    return true;
+  }
+  throw new Error("busy");
+}
+export async function releaseSeat(pid, id) {
+  for (let i = 0; i < 12; i++) {
+    const got = await sd().getWithMetadata("seats-" + pid, { type: "json" }); if (!got || !got.data) return;
+    const w = await sd().setJSON("seats-" + pid, { ids: (got.data.ids || []).filter((x) => x !== id) }, { onlyIfMatch: got.etag });
+    if (!(w && w.modified === false)) return; await pause(30);
+  }
 }
 export async function tenantForEmail(email) { const id = await emailOwner(email); return id ? tenant(id) : null; }
 // What an agent may do right now: only if the account is in good standing AND the agent is active.
@@ -134,10 +202,15 @@ export function newTenant(b) {
 
 // ---------- audit log (who changed what, when) ----------
 export async function audit(tenantId, who, action, detail) {
-  const key = "audit-" + (tenantId || "admin");
-  const list = (await sd().get(key, { type: "json" })) || [];
-  list.unshift({ at: new Date().toISOString(), who, action, detail: clean(detail, 400) });
-  await sd().setJSON(key, list.slice(0, 1000));
+  // Safe saving here too, so no history line is lost when several changes happen at once.
+  const key = "audit-" + (tenantId || "admin"), line = { at: new Date().toISOString(), who, action, detail: clean(detail, 400) };
+  for (let i = 0; i < 12; i++) {
+    const got = await sd().getWithMetadata(key, { type: "json" });
+    const list = [line, ...((got && got.data) || [])].slice(0, 1000);
+    const w = got ? await sd().setJSON(key, list, { onlyIfMatch: got.etag }) : await sd().setJSON(key, list, { onlyIfNew: true });
+    if (!(w && w.modified === false)) return;
+    await pause(10 + Math.random() * 40 * (i + 1));
+  }
 }
 
 // ---------- B2B partners (PRIVATE: admin only) ----------
@@ -182,7 +255,7 @@ export function partnerInvoice(p, clients) {
 // ---------- partner connections vault (their phone, voice AI and AI brain keys) ----------
 // Keys are encrypted (AES-256-GCM) with SD_VAULT_KEY before they are stored, and are never sent back to any page (only the last 4 characters).
 export const CONNECTIONS = {
-  phone: { label: "Phone provider", providers: ["Twilio", "Telnyx", "Plivo", "Vonage", "Other"], fields: { account: "Account SID / ID", secret: "Auth token / API key", numbers: "Phone numbers (comma separated)" } },
+  phone: { label: "Phone provider", providers: ["Twilio", "RingCentral", "Telnyx", "Plivo", "Vonage", "SignalWire", "Other"], fields: { account: "Account SID / ID", secret: "Auth token / API key", numbers: "Phone numbers (comma separated)" } },
   voice: { label: "Voice AI (Jennifer's voice)", providers: ["Cartesia", "Retell AI", "Vapi", "ElevenLabs", "Other"], fields: { secret: "API key", agent: "Agent / assistant ID" } },
   brain: { label: "AI brain for Eva, Jonathan & Rosie", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
   research: { label: "Research search (Eva & Jonathan)", providers: ["Perplexity", "Brave Search", "Other"], fields: { secret: "API key" } },

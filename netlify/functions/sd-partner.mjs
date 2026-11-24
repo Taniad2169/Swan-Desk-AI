@@ -1,6 +1,6 @@
 // SwanDesk AI partner portal API: the licensee's own staff manage only THEIR customers' workspaces and THEIR provider connections.
 // They never see WebSwan's prices, costs, other partners or WebSwan's own clients.
-import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, tenant, saveTenant, newTenant, audit, emailOwner,
+import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, tenant, newTenant, audit, updateTenant, createTenant, claimEmail, reserveSeat, releaseSeat,
   partnerForAdmin, partnerClients, partners, EDITION_AGENTS, CONNECTIONS, vault, vaultView, saveVault } from "../lib/core.mjs";
 
 const clientView = (t) => ({ id: t.id, business: t.business, ownerName: t.ownerName, industry: t.industry, phone: t.phone, emails: t.emails, status: t.status, createdAt: t.createdAt,
@@ -24,15 +24,15 @@ export default async (req) => {
       clients: mine.map(clientView), connections: CONNECTIONS, vault: vaultView(await vault(p.id)), admin: isAdmin(who) });
   }
   if (b.action === "create") {
-    if (limit && mine.length >= limit) return json(403, { error: `Your license includes ${limit} customer workspaces. Contact The WebSwan to add more.` });
     const t = newTenant(b);
     if (!t.business) return json(400, { error: "Add the business name." });
     t.emails = String(b.emails || "").split(/[,\s]+/).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
     if (!t.emails.length) return json(400, { error: "Add at least one email the customer will sign in with." });
-    for (const e of t.emails) if (await emailOwner(e)) return json(400, { error: e + " is already used by another SwanDesk workspace." });
     t.billing.partnerId = p.id; t.billing.setupPaid = false;
     for (const a of allowed) if ((b.agents || []).includes(a)) t.agents[a] = { state: "active", since: new Date().toISOString() };
-    await saveTenant(t); await audit(t.id, who, "created by partner", `${p.name}: ${t.business}`);
+    // The seat is reserved atomically on the server, so the license limit holds even if many requests arrive at once.
+    if (!(await reserveSeat(p.id, limit, t.id))) return json(403, { error: `Your license includes ${limit} customer workspaces. Contact The WebSwan to add more.` });
+    const made = await createTenant(t); if (made.error) { await releaseSeat(p.id, t.id); return json(400, { error: made.error }); } await audit(t.id, who, "created by partner", `${p.name}: ${t.business}`);
     return json(200, { client: clientView(t) });
   }
   if (b.action === "vault_save") {
@@ -44,28 +44,32 @@ export default async (req) => {
   // Everything below acts on one of THIS partner's customers only.
   const t = await tenant(clean(b.id, 32));
   if (!t || !t.billing || t.billing.partnerId !== p.id) return json(404, { error: "Customer not found." });
+  const save = async (label, detail, change) => {
+    try {
+      const r = await updateTenant(t.id, (x) => { if (!x.billing || x.billing.partnerId !== p.id) return { error: "Customer not found." }; return change(x); });
+      if (!r || r.error) return json(404, { error: "Customer not found." });
+      await audit(t.id, who, label, detail); return json(200, { client: clientView(r) });
+    } catch { return json(503, { error: "SwanDesk is busy, please try again." }); }
+  };
   if (b.action === "agent") {
     // Partners switch on/off only the agents their edition includes; upgrades (e.g. Eva on Voice Edition) are turned on by WebSwan.
     if (!allowed.includes(b.agent) || !["active", "paused", "locked"].includes(b.state)) return json(403, { error: "That agent isn't included in your license. Contact The WebSwan to add it." });
-    t.agents[b.agent] = { state: b.state, since: new Date().toISOString() };
-    await saveTenant(t); await audit(t.id, who, "partner: agent", `${AGENTS[b.agent].name} → ${b.state}`);
-    return json(200, { client: clientView(t) });
+    return save("partner: agent", `${AGENTS[b.agent].name} → ${b.state}`, (x) => { x.agents[b.agent] = { state: b.state, since: new Date().toISOString() }; });
   }
   if (b.action === "account") {
-    t.status = b.on === true ? "active" : "suspended"; t.statusNote = b.on === true ? "" : "Paused by " + p.name;
-    await saveTenant(t); await audit(t.id, who, "partner: account " + (b.on === true ? "on" : "off"), p.name);
-    return json(200, { client: clientView(t) });
+    const on = b.on === true;
+    return save("partner: account " + (on ? "on" : "off"), p.name, (x) => { x.status = on ? "active" : "suspended"; x.statusNote = on ? "" : "Paused by " + p.name; });
   }
   if (b.action === "update") {
-    for (const k of ["business", "industry", "ownerName", "phone"]) if (typeof b[k] === "string" && b[k].trim()) t[k] = clean(b[k], 120);
-    let old;
+    let em = null;
     if (b.emails != null) {
-      const em = String(b.emails).split(/[,\s]+/).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
-      for (const e of em) { const id = await emailOwner(e); if (id && id !== t.id) return json(400, { error: e + " is already used by another SwanDesk workspace." }); }
-      if (em.length) { old = t.emails; t.emails = em; }
+      em = String(b.emails).split(/[,\s]+/).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
+      for (const e of em) if (!(t.emails || []).includes(e) && !(await claimEmail(e, t.id))) return json(400, { error: e + " is already used by another SwanDesk workspace." });
     }
-    await saveTenant(t, old); await audit(t.id, who, "partner: updated", p.name);
-    return json(200, { client: clientView(t) });
+    return save("partner: updated", p.name, (x) => {
+      for (const k of ["business", "industry", "ownerName", "phone"]) if (typeof b[k] === "string" && b[k].trim()) x[k] = clean(b[k], 120);
+      if (em && em.length) x.emails = em;
+    });
   }
   return json(400, { error: "Unknown action." });
 };

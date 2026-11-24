@@ -1,6 +1,6 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
 import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
-  sd, tenants, tenant, saveTenant, emailOwner, EDITION_AGENTS, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault, makeBackup, listBackups, restoreBackup, backups } from "../lib/core.mjs";
+  sd, tenants, tenant, saveTenant, emailOwner, updateTenant, createTenant, claimEmail, EDITION_AGENTS, newTenant, audit, partners, withPartnerDefaults, partnerInvoice, PARTNER_DEFAULTS, CONNECTIONS, vault, vaultView, saveVault, makeBackup, listBackups, restoreBackup, backups } from "../lib/core.mjs";
 import crypto from "node:crypto";
 
 function summary(t, pricing) {
@@ -30,12 +30,12 @@ export default async (req) => {
     if (!t.business) return json(400, { error: "Add the business name." });
     t.emails = (Array.isArray(b.emails) ? b.emails : String(b.emails || "").split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
     if (!t.emails.length) return json(400, { error: "Add at least one Google email the client will sign in with." });
-    for (const e of t.emails) { const id = await emailOwner(e); if (id) { const o = await tenant(id); return json(400, { error: e + " already belongs to " + (o ? o.business : "another client") + "." }); } }
+
     for (const a of Object.keys(AGENTS)) if ((b.agents || []).includes(a)) t.agents[a] = { state: "active", since: new Date().toISOString() };
     if (PRICING_TERMS(pricing).includes(b.term)) t.billing.term = b.term;
     if (JPLANS.includes(b.jplan)) t.billing.jplan = b.jplan;
     if (b.partnerId && (await partners()).some((x) => x.id === b.partnerId)) t.billing.partnerId = b.partnerId;
-    await saveTenant(t); await audit(t.id, who, "created", `${t.business}; agents: ${(b.agents || []).join(", ") || "none"}`);
+    const made = await createTenant(t); if (made.error) return json(400, { error: made.error }); await audit(t.id, who, "created", `${t.business}; agents: ${(b.agents || []).join(", ") || "none"}`);
     return json(200, { client: summary(t, pricing) });
   }
 
@@ -89,39 +89,42 @@ export default async (req) => {
   const t = await tenant(clean(b.id, 20));
   if (!t && b.action !== "pricing" && b.action !== "request_done") return json(404, { error: "Client not found." });
 
+  // Every change below is applied with safe saving (updateTenant), so two changes at the same moment are both kept.
+  const save = async (label, detail, change) => {
+    try { const r = await updateTenant(t.id, change); if (r && r.error) return json(400, { error: r.error }); await audit(t.id, who, label, typeof detail === "function" ? detail(r) : detail); return json(200, { client: summary(r, pricing) }); }
+    catch { return json(503, { error: "SwanDesk is busy, please try again." }); }
+  };
   // Agent licensing: locked (not purchased), active, paused, suspended. Only admins reach this code.
   if (b.action === "agent") {
     if (!AGENTS[b.agent] || !AGENT_STATES.includes(b.state)) return json(400, { error: "Bad agent or state." });
-    const before = t.agents[b.agent].state;
-    t.agents[b.agent] = { state: b.state, since: new Date().toISOString() };
-    await saveTenant(t); await audit(t.id, who, "agent", `${AGENTS[b.agent].name}: ${before} → ${b.state}`);
-    return json(200, { client: summary(t, pricing) });
+    let before; return save("agent", () => `${AGENTS[b.agent].name}: ${before} → ${b.state}`, (x) => { before = x.agents[b.agent].state; x.agents[b.agent] = { state: b.state, since: new Date().toISOString() }; });
   }
   // Non-payment switch: suspends the whole account (every agent stops) until switched back on.
   if (b.action === "account") {
     const on = b.on === true;
-    t.status = on ? "active" : "suspended"; t.statusNote = on ? "" : clean(b.note, 200) || "Paused for non-payment";
-    await saveTenant(t); await audit(t.id, who, on ? "account on" : "account off", t.statusNote || "Back on");
-    return json(200, { client: summary(t, pricing) });
+    return save(on ? "account on" : "account off", on ? "Back on" : clean(b.note, 200) || "Paused for non-payment", (x) => { x.status = on ? "active" : "suspended"; x.statusNote = on ? "" : clean(b.note, 200) || "Paused for non-payment"; });
   }
   if (b.action === "update") {
-    for (const k of ["business", "industry", "ownerName", "phone", "timezone"]) if (typeof b[k] === "string") t[k] = clean(b[k], 120);
+    let em = null;
     if (b.emails != null) {
-      const em = (Array.isArray(b.emails) ? b.emails : String(b.emails).split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
-      for (const e of em) { const id = await emailOwner(e); if (id && id !== t.id) return json(400, { error: e + " already belongs to another client." }); }
-      if (em.length) { b._old = t.emails; t.emails = em; }
+      em = (Array.isArray(b.emails) ? b.emails : String(b.emails).split(/[,\s]+/)).map((e) => clean(e, 120).toLowerCase()).filter(isEmail).slice(0, 10);
+      for (const e of em) if (!(t.emails || []).includes(e) && !(await claimEmail(e, t.id))) return json(400, { error: e + " already belongs to another client." });
     }
-    if (b.billing) {
-      if (PRICING_TERMS(pricing).includes(b.billing.term)) t.billing.term = b.billing.term;
-      if (JPLANS.includes(b.billing.jplan)) t.billing.jplan = b.billing.jplan;
-      if (typeof b.billing.setupPaid === "boolean") t.billing.setupPaid = b.billing.setupPaid;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(b.billing.paidThrough || "")) t.billing.paidThrough = b.billing.paidThrough;
-      if (typeof b.billing.notes === "string") t.billing.notes = clean(b.billing.notes, 500);
-      if (b.billing.partnerId === "") t.billing.partnerId = "";
-      else if (b.billing.partnerId && (await partners()).some((x) => x.id === b.billing.partnerId)) t.billing.partnerId = b.billing.partnerId;
-    }
-    await saveTenant(t, b._old); await audit(t.id, who, "updated", "details / billing");
-    return json(200, { client: summary(t, pricing) });
+    const valid = async () => (await partners()).some((x) => x.id === b.billing.partnerId);
+    const partnerOk = b.billing && b.billing.partnerId ? await valid() : false;
+    return save("updated", "details / billing", (x) => {
+      for (const k of ["business", "industry", "ownerName", "phone", "timezone"]) if (typeof b[k] === "string") x[k] = clean(b[k], 120);
+      if (em && em.length) x.emails = em;
+      if (b.billing) {
+        if (PRICING_TERMS(pricing).includes(b.billing.term)) x.billing.term = b.billing.term;
+        if (JPLANS.includes(b.billing.jplan)) x.billing.jplan = b.billing.jplan;
+        if (typeof b.billing.setupPaid === "boolean") x.billing.setupPaid = b.billing.setupPaid;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(b.billing.paidThrough || "")) x.billing.paidThrough = b.billing.paidThrough;
+        if (typeof b.billing.notes === "string") x.billing.notes = clean(b.billing.notes, 500);
+        if (b.billing.partnerId === "") x.billing.partnerId = "";
+        else if (partnerOk) x.billing.partnerId = b.billing.partnerId;
+      }
+    });
   }
   if (b.action === "audit") return json(200, { log: ((await sd().get("audit-" + t.id, { type: "json" })) || []).slice(0, 200) });
   if (b.action === "request_done") {

@@ -1,6 +1,6 @@
 // SwanDesk AI client API: what the signed-in client sees (their workspace, which agents are on) and upgrade requests.
 // A client can pause/resume an ACTIVE agent they own; they can never unlock a locked or suspended one.
-import { whoIs, isAdmin, sameSite, json, clean, AGENTS, sd, tenant, tenantForEmail, saveTenant, audit, partner } from "../lib/core.mjs";
+import { whoIs, isAdmin, sameSite, json, clean, AGENTS, sd, tenant, tenantForEmail, updateTenant, audit, partner } from "../lib/core.mjs";
 
 // Partner Voice Edition customers only see Jennifer, plus any upgrade agent that was switched on for them.
 const view = (t, p) => ({
@@ -39,9 +39,9 @@ export default async (req) => {
     if (!a || t.status !== "active") return json(403, { error: "Not available." });
     if (b.action === "pause" && a.state !== "active") return json(403, { error: "Only an active agent can be paused." });
     if (b.action === "resume" && a.state !== "paused") return json(403, { error: "Only a paused agent can be resumed." });
-    t.agents[b.agent] = { state: b.action === "pause" ? "paused" : "active", since: new Date().toISOString() };
-    await saveTenant(t); await audit(t.id, who, b.action, AGENTS[b.agent].name);
-    return json(200, { workspace: view(t, p) });
+    let r; try { r = await updateTenant(t.id, (x) => { x.agents[b.agent] = { state: b.action === "pause" ? "paused" : "active", since: new Date().toISOString() }; }); } catch { return json(503, { error: "SwanDesk is busy, please try again." }); }
+    await audit(t.id, who, b.action, AGENTS[b.agent].name);
+    return json(200, { workspace: view(r, p) });
   }
   return json(400, { error: "Unknown action." });
 };
