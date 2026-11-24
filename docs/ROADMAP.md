@@ -61,3 +61,11 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - Cites his sources on research and marks anything he is unsure of; never invents case law or citations.
 - Keeps clients' documents private to their own SwanDesk.
 - Uses Jonathan's voice (same voice as in the WebSwan AI Office).
+
+## Pricing approved Nov 23, 2026 (Tania, reviewed by Clara and Gips)
+- Jennifer (inbound receptionist + warm outbound appointment setter; inbound and outbound share the minutes): Lite 600 min $249, Standard 1,500 min $349, Pro 4,000 min $649. Extra minutes $0.20 (must be enforced: it protects Pro's margin).
+- Eva $249 (with deep research, about 40 reports/month), Jonathan $299, Rosie $249 (social media, Google Business, graphics; posts directly to client accounts like Sonny at Marblism; Content360 is never used for clients).
+- Bundles: any 2 up to $549, any 3 up to $799, all 4 $949; bundles include Jennifer Standard; Jennifer Pro inside a bundle +$300.
+- Setup: $299 (1-2 agents), $499 (3), $599 (all 4).
+- Clara: lowest safe prices Jennifer Lite $89 / Standard $189 / Pro $429, Eva $119, Jonathan $159, Rosie $99; fixed costs about $134/month; one Full Desk client covers them.
+- Before launch (Gips): usage metering, automatic billing, alerts at 75/90/100%, client allowance dashboard, HIPAA BAAs with every vendor used for doctor clients.

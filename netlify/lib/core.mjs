@@ -8,30 +8,41 @@ export const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "webswan-gigoia-tas
 export const ADMINS = ["thewebswann@gmail.com", "taniadomingue373@gmail.com"];
 export const AGENTS = {
   jennifer: { name: "Jennifer", role: "Receptionist & Appointment Setter", desc: "Answers your calls 24/7, books appointments on your calendar, takes messages, and makes warm follow-up calls only to people who asked you to call them back (like the contact you met at an event, or the homeowner who said 'call me in 3 months')." },
-  eva: { name: "Eva", role: "Executive Assistant", desc: "Reads your inbox every morning and tells you what matters, prepares personalized email drafts (with PDFs and photos attached) for you to approve, keeps your follow-ups and tasks on track, and sends friendly holiday and market-update emails to your future clients." },
-  stan: { name: "Stan", role: "Social Media Content Creator", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and Google Business, with branded pictures and captions, and schedules them after you approve. Your videos go out on the dates you choose." },
+  eva: { name: "Eva", role: "Executive Assistant & Researcher", desc: "Reads your inbox every morning and tells you what matters, prepares personalized email drafts (with PDFs and photos attached) for you to approve, keeps your follow-ups and tasks on track, sends friendly holiday and market-update emails to your future clients, and does deep research for you (about 40 research reports a month)." },
+  stan: { name: "Rosie", role: "Social Media, Google Business & Graphic Designer", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and your Google Business Profile, designs the branded pictures in your colors, writes the captions, and publishes them straight to your accounts after you approve (about 30 posts a month, up to 5 accounts plus Google Business)." },
   jonathan: { name: "Jonathan", role: "Legal Eagle · Legal & Compliance Assistant", desc: "For doctors: reviews your documents, legal letters and website so your practice stays in compliance (ADA, privacy, cookie and HIPAA forms), keeps you updated on new rules in your state, drafts your privacy policy, cookie policy and accessibility statement, and tells you when it's time to consult an attorney. For attorneys: your legal assistant who reviews documents, helps you prepare for court, builds case presentations, drafts legal letters and does deep research for your review. Jonathan is an AI assistant, not a lawyer, and does not give legal advice." }
 };
 export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
-// Prices (USD per month). Setup: 1-2 agents $299, 3 agents $499, all 4 $599. Prepaying reduces the price.
+// Prices (USD per month), approved by Tania with Clara's review (Nov 23, 2026). Setup: 1-2 agents $299, 3 agents $499, all 4 $599.
+// Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute.
 export const PRICING = {
-  agent: { jennifer: 349, eva: 199, stan: 199, jonathan: 299 },
-  bundle: { 2: 499, 3: 699, 4: 949 },
+  agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
+  jplans: { lite: { label: "Lite", minutes: 600, price: 249 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 4000, price: 649 } },
+  overage: 0.20, proUpgrade: 300,
+  bundle: { 2: 549, 3: 799, 4: 949 },
   setup: { 1: 299, 2: 299, 3: 499, 4: 599 },
   terms: { monthly: { months: 1, off: 0, label: "Monthly" }, quarterly: { months: 3, off: 0.05, label: "Every 3 months" }, semiannual: { months: 6, off: 0.10, label: "Every 6 months" }, annual: { months: 12, off: 0.15, label: "Once a year" } }
 };
 export async function getPricing() {
   const saved = (await sd().get("pricing", { type: "json" }).catch(() => null)) || {};
-  return { agent: { ...PRICING.agent, ...(saved.agent || {}) }, bundle: { ...PRICING.bundle, ...(saved.bundle || {}) }, setup: { ...PRICING.setup, ...(saved.setup || {}) }, terms: Object.fromEntries(Object.entries(PRICING.terms).map(([k, v]) => [k, { ...v, ...((saved.terms || {})[k] || {}) }])) };
+  const jplans = Object.fromEntries(Object.entries(PRICING.jplans).map(([k, v]) => [k, { ...v, ...((saved.jplans || {})[k] || {}) }]));
+  return { jplans, overage: saved.overage ?? PRICING.overage, proUpgrade: saved.proUpgrade ?? PRICING.proUpgrade, agent: { ...PRICING.agent, ...(saved.agent || {}), jennifer: jplans.standard.price }, bundle: { ...PRICING.bundle, ...(saved.bundle || {}) }, setup: { ...PRICING.setup, ...(saved.setup || {}) }, terms: Object.fromEntries(Object.entries(PRICING.terms).map(([k, v]) => [k, { ...v, ...((saved.terms || {})[k] || {}) }])) };
 }
 // Monthly price for a set of agents: the bundle price, but never more than buying them separately.
-export function priceFor(agents, pricing) {
+// jplan = Jennifer's minute plan (lite | standard | pro). Bundles include Jennifer Standard (Lite if chosen); Pro adds proUpgrade on top.
+export function priceFor(agents, pricing, jplan) {
   const list = agents.filter((a) => pricing.agent[a] != null);
   if (!list.length) return { monthly: 0, setup: 0 };
-  const sum = list.reduce((t, a) => t + pricing.agent[a], 0);
-  const monthly = list.length === 1 ? sum : Math.min(sum, pricing.bundle[list.length] || sum);
-  return { monthly, setup: pricing.setup[list.length] || 0, separately: sum };
+  const plans = pricing.jplans || PRICING.jplans, plan = plans[jplan] ? jplan : "standard";
+  const jPrice = (a) => a === "jennifer" ? plans[plan].price : pricing.agent[a];
+  const separately = list.reduce((t, a) => t + jPrice(a), 0);
+  let monthly = separately;
+  if (list.length > 1) {
+    const base = list.reduce((t, a) => t + (a === "jennifer" ? (plan === "lite" ? plans.lite.price : plans.standard.price) : pricing.agent[a]), 0);
+    monthly = Math.min(base, pricing.bundle[list.length] || base) + (list.includes("jennifer") && plan === "pro" ? (pricing.proUpgrade ?? PRICING.proUpgrade) : 0);
+  }
+  return { monthly, setup: pricing.setup[list.length] || 0, separately };
 }
 export function termTotal(monthly, term, pricing) {
   const t = pricing.terms[term] || pricing.terms.monthly;
@@ -99,7 +110,7 @@ export function newTenant(b) {
     business: clean(b.business, 120), industry: clean(b.industry, 60), ownerName: clean(b.ownerName, 80), phone: clean(b.phone, 30), timezone: clean(b.timezone, 40) || "America/Los_Angeles",
     emails: [], status: "active", statusNote: "",
     agents: Object.fromEntries(Object.keys(AGENTS).map((a) => [a, { state: "locked", since: new Date().toISOString() }])),
-    billing: { term: "monthly", setupPaid: false, paidThrough: "", notes: "" }
+    billing: { term: "monthly", jplan: "standard", setupPaid: false, paidThrough: "", notes: "" }
   };
 }
 

@@ -29,6 +29,7 @@
     <div class="row">
       <div class="f"><label>Agents purchased</label><div id="nA"></div></div>
       <div class="f"><label for="nT">Payment plan</label><select id="nT"></select></div>
+      <div class="f"><label for="nJ">Jennifer's minute plan</label><select id="nJ"></select></div>
       <div class="f"><label>Price</label><div id="nPrice" class="muted"></div></div>
     </div>
     <button class="btn" id="nGo">Create client workspace</button>
@@ -48,14 +49,18 @@ const money = (n) => "$" + Number(n || 0).toLocaleString("en-US");
 let D = null;
 const STATE_HELP = { locked: "Not purchased (shows as locked)", active: "On", paused: "Paused", suspended: "Suspended" };
 
-function priceFor(agents) {
-  const p = D.pricing; const sum = agents.reduce((t, a) => t + p.agent[a], 0);
-  const monthly = agents.length <= 1 ? sum : Math.min(sum, p.bundle[agents.length] || sum);
+// Same rule as the server: bundles include Jennifer Standard (or Lite); Jennifer Pro adds the Pro upgrade in a bundle.
+function priceFor(agents, jplan) {
+  const p = D.pricing, plans = p.jplans, plan = plans[jplan] ? jplan : "standard";
+  const sep = agents.reduce((t, a) => t + (a === "jennifer" ? plans[plan].price : p.agent[a]), 0);
+  let monthly = sep;
+  if (agents.length > 1) { const base = agents.reduce((t, a) => t + (a === "jennifer" ? (plan === "lite" ? plans.lite.price : plans.standard.price) : p.agent[a]), 0); monthly = Math.min(base, p.bundle[agents.length] || base) + (agents.includes("jennifer") && plan === "pro" ? p.proUpgrade : 0); }
   return { monthly, setup: agents.length ? p.setup[agents.length] : 0 };
 }
+const jplanOpts = (sel) => Object.entries(D.pricing.jplans).map(([k, v]) => `<option value="${k}" ${k === (sel || "standard") ? "selected" : ""}>${esc(v.label)}: ${v.minutes.toLocaleString()} min · ${money(v.price)}</option>`).join("");
 const termTotal = (m, term) => { const t = D.pricing.terms[term]; return Math.round(m * t.months * (1 - t.off)); };
-function priceText(agents, term) {
-  const p = priceFor(agents); if (!agents.length) return "Pick at least one agent.";
+function priceText(agents, term, jplan) {
+  const p = priceFor(agents, jplan); if (!agents.length) return "Pick at least one agent.";
   const t = D.pricing.terms[term];
   return `<b>${money(p.monthly)}/month</b>` + (t.months > 1 ? ` · ${esc(t.label)}: <b>${money(termTotal(p.monthly, term))}</b> (${Math.round(t.off * 100)}% off)` : "") + ` · setup <b>${money(p.setup)}</b>`;
 }
@@ -63,8 +68,9 @@ function priceText(agents, term) {
 function drawNew() {
   $("nA").innerHTML = Object.entries(D.agents).map(([k, a]) => `<label class="switch" style="margin-right:14px;font-weight:600"><input type="checkbox" class="nAg" value="${k}"> ${esc(a.name)} <span class="muted">(${money(D.pricing.agent[k])})</span></label>`).join("");
   $("nT").innerHTML = Object.entries(D.pricing.terms).map(([k, t]) => `<option value="${k}">${esc(t.label)}${t.off ? " (" + Math.round(t.off * 100) + "% off)" : ""}</option>`).join("");
-  const upd = () => $("nPrice").innerHTML = priceText([...document.querySelectorAll(".nAg:checked")].map((c) => c.value), $("nT").value);
-  document.querySelectorAll(".nAg").forEach((c) => c.onchange = upd); $("nT").onchange = upd; upd();
+  $("nJ").innerHTML = jplanOpts("standard");
+  const upd = () => $("nPrice").innerHTML = priceText([...document.querySelectorAll(".nAg:checked")].map((c) => c.value), $("nT").value, $("nJ").value);
+  document.querySelectorAll(".nAg").forEach((c) => c.onchange = upd); $("nT").onchange = upd; $("nJ").onchange = upd; upd();
 }
 function drawReqs() {
   $("reqCard").hidden = !D.requests.length;
@@ -79,6 +85,7 @@ function clientCard(c) {
     <table style="margin-top:8px"><tr><th>Agent</th><th>Status</th></tr>${Object.entries(D.agents).map(([k, a]) => `<tr><td>${esc(a.name)} <span class="muted">${esc(a.role)}</span></td><td><select class="ag" data-a="${k}" style="max-width:260px">${D.states.map((s) => `<option value="${s}" ${c.agents[k].state === s ? "selected" : ""}>${STATE_HELP[s]}</option>`).join("")}</select></td></tr>`).join("")}</table>
     <div class="row" style="margin-top:10px">
       <div class="f"><label>Payment plan</label><select class="term">${terms}</select></div>
+      <div class="f"><label>Jennifer's minute plan</label><select class="jplan">${jplanOpts(c.billing.jplan)}</select></div>
       <div class="f"><label>Paid through</label><input type="date" class="paid" value="${esc(c.billing.paidThrough)}"></div>
       <div class="f"><label>Setup fee (${money(c.setupFee)})</label><label class="switch"><input type="checkbox" class="setup" ${c.billing.setupPaid ? "checked" : ""}> ${c.billing.setupPaid ? "Paid" : "Not paid"}</label></div>
       <div class="f"><label>Price</label><div class="muted"><b>${money(c.monthly)}/month</b>${c.billing.term !== "monthly" ? ` · ${money(c.termTotal)} per ${esc(D.pricing.terms[c.billing.term].label.toLowerCase())}` : ""}</div></div>
@@ -93,13 +100,15 @@ function drawList() {
     const act = async (body) => { try { await SD.api("sd-admin", Object.assign({ id }, body)); toast("Saved"); load(); } catch (e) { toast(e.message); load(); } };
     card.querySelector(".acc").onchange = (e) => { if (!e.target.checked && !confirm("Turn this account OFF for non-payment? All of their agents stop until you turn it back on.")) { e.target.checked = true; return; } act({ action: "account", on: e.target.checked }); };
     card.querySelectorAll(".ag").forEach((s) => s.onchange = () => act({ action: "agent", agent: s.dataset.a, state: s.value }));
-    card.querySelector(".save").onclick = () => act({ action: "update", billing: { term: card.querySelector(".term").value, paidThrough: card.querySelector(".paid").value, setupPaid: card.querySelector(".setup").checked } });
+    card.querySelector(".save").onclick = () => act({ action: "update", billing: { term: card.querySelector(".term").value, jplan: card.querySelector(".jplan").value, paidThrough: card.querySelector(".paid").value, setupPaid: card.querySelector(".setup").checked } });
     card.querySelector(".log").onclick = async () => { const box = card.querySelector(".logbox"); if (!box.hidden) return box.hidden = true; const r = await SD.api("sd-admin", { action: "audit", id }); box.innerHTML = r.log.map((l) => `${esc(new Date(l.at).toLocaleString())} · ${esc(l.who)} · <b>${esc(l.action)}</b> ${esc(l.detail)}`).join("<br>") || "No history yet."; box.hidden = false; };
   });
 }
 function drawPrices() {
   const p = D.pricing;
-  $("prices").innerHTML = `<div class="row">${Object.entries(D.agents).map(([k, a]) => `<div class="f"><label>${esc(a.name)} / month</label><input type="number" min="1" class="pa" data-k="${k}" value="${p.agent[k]}"></div>`).join("")}
+  $("prices").innerHTML = `<div class="row">${Object.entries(p.jplans).map(([k, v]) => `<div class="f"><label>Jennifer ${esc(v.label)}: minutes</label><input type="number" min="0" class="jm" data-k="${k}" value="${v.minutes}"></div><div class="f"><label>Jennifer ${esc(v.label)}: $ / month</label><input type="number" min="1" class="jp" data-k="${k}" value="${v.price}"></div>`).join("")}
+    <div class="f"><label>Extra minutes: $ per minute</label><input type="number" min="0.01" step="0.01" id="ov" value="${p.overage}"></div><div class="f"><label>Jennifer Pro upgrade inside a bundle</label><input type="number" min="0" id="pu" value="${p.proUpgrade}"></div></div>
+    <div class="row">${Object.entries(D.agents).filter(([k]) => k !== "jennifer").map(([k, a]) => `<div class="f"><label>${esc(a.name)} / month</label><input type="number" min="1" class="pa" data-k="${k}" value="${p.agent[k]}"></div>`).join("")}
     <div class="f"><label>Any 2 agents / month</label><input type="number" min="1" id="b2" value="${p.bundle[2]}"></div><div class="f"><label>Any 3 agents / month</label><input type="number" min="1" id="b3" value="${p.bundle[3]}"></div><div class="f"><label>All 4 agents / month</label><input type="number" min="1" id="b4" value="${p.bundle[4]}"></div></div>
     <div class="row"><div class="f"><label>Setup: 1 agent</label><input type="number" min="0" id="s1" value="${p.setup[1]}"></div><div class="f"><label>Setup: 2 agents</label><input type="number" min="0" id="s2" value="${p.setup[2]}"></div><div class="f"><label>Setup: 3 agents</label><input type="number" min="0" id="s3" value="${p.setup[3]}"></div><div class="f"><label>Setup: all 4</label><input type="number" min="0" id="s4" value="${p.setup[4]}"></div></div>
     <div class="row">${Object.entries(p.terms).filter(([k]) => k !== "monthly").map(([k, t]) => `<div class="f"><label>${esc(t.label)}: % off</label><input type="number" min="0" max="49" class="pt" data-k="${k}" value="${Math.round(t.off * 100)}"></div>`).join("")}</div>
@@ -107,6 +116,8 @@ function drawPrices() {
   $("pSave").onclick = async () => {
     const pricing = { agent: {}, bundle: { 2: $("b2").value, 3: $("b3").value, 4: $("b4").value }, setup: { 1: $("s1").value, 2: $("s2").value, 3: $("s3").value, 4: $("s4").value }, terms: {} };
     document.querySelectorAll(".pa").forEach((i) => pricing.agent[i.dataset.k] = i.value);
+    pricing.jplans = {}; document.querySelectorAll(".jp").forEach((i) => pricing.jplans[i.dataset.k] = { price: i.value, minutes: document.querySelector(`.jm[data-k="${i.dataset.k}"]`).value });
+    pricing.overage = $("ov").value; pricing.proUpgrade = $("pu").value;
     document.querySelectorAll(".pt").forEach((i) => pricing.terms[i.dataset.k] = Number(i.value) / 100);
     try { D.pricing = (await SD.api("sd-admin", { action: "pricing", pricing })).pricing; toast("Prices saved"); drawNew(); load(); } catch (e) { toast(e.message); }
   };
@@ -114,7 +125,7 @@ function drawPrices() {
 async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); } catch (e) { toast(e.message); } }
 $("nGo").onclick = async () => {
   const agents = [...document.querySelectorAll(".nAg:checked")].map((c) => c.value);
-  try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value });
+  try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value, jplan: $("nJ").value });
     toast("Client created ✅"); ["nB", "nO", "nP", "nE"].forEach((i) => $(i).value = ""); document.querySelectorAll(".nAg").forEach((c) => c.checked = false); drawNew(); load(); } catch (e) { toast(e.message); }
 };
 $("inBtn").onclick = () => SD.signIn().catch((e) => $("gateMsg").textContent = e.message);

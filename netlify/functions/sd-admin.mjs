@@ -4,7 +4,7 @@ import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, g
 
 function summary(t, pricing) {
   const on = Object.keys(AGENTS).filter((a) => t.agents[a] && t.agents[a].state !== "locked");
-  const p = priceFor(on, pricing);
+  const p = priceFor(on, pricing, t.billing.jplan);
   return { ...t, licensed: on, monthly: p.monthly, setupFee: p.setup, termTotal: termTotal(p.monthly, t.billing.term, pricing) };
 }
 
@@ -32,6 +32,7 @@ export default async (req) => {
     if (taken) return json(400, { error: "That email already belongs to " + taken.business + "." });
     for (const a of Object.keys(AGENTS)) if ((b.agents || []).includes(a)) t.agents[a] = { state: "active", since: new Date().toISOString() };
     if (PRICING_TERMS(pricing).includes(b.term)) t.billing.term = b.term;
+    if (JPLANS.includes(b.jplan)) t.billing.jplan = b.jplan;
     await saveTenant(t); await audit(t.id, who, "created", `${t.business}; agents: ${(b.agents || []).join(", ") || "none"}`);
     return json(200, { client: summary(t, pricing) });
   }
@@ -64,6 +65,7 @@ export default async (req) => {
     }
     if (b.billing) {
       if (PRICING_TERMS(pricing).includes(b.billing.term)) t.billing.term = b.billing.term;
+      if (JPLANS.includes(b.billing.jplan)) t.billing.jplan = b.billing.jplan;
       if (typeof b.billing.setupPaid === "boolean") t.billing.setupPaid = b.billing.setupPaid;
       if (/^\d{4}-\d{2}-\d{2}$/.test(b.billing.paidThrough || "")) t.billing.paidThrough = b.billing.paidThrough;
       if (typeof b.billing.notes === "string") t.billing.notes = clean(b.billing.notes, 500);
@@ -83,6 +85,9 @@ export default async (req) => {
     for (const a of Object.keys(AGENTS)) if (Number(p.agent && p.agent[a]) > 0) out.agent[a] = Math.round(Number(p.agent[a]));
     for (const n of [2, 3, 4]) if (Number(p.bundle && p.bundle[n]) > 0) out.bundle[n] = Math.round(Number(p.bundle[n]));
     for (const n of [1, 2, 3, 4]) if (Number(p.setup && p.setup[n]) >= 0 && p.setup && p.setup[n] !== "") out.setup[n] = Math.round(Number(p.setup[n]));
+    out.jplans = {}; for (const k of JPLANS) if (Number(p.jplans && p.jplans[k] && p.jplans[k].price) > 0) out.jplans[k] = { price: Math.round(Number(p.jplans[k].price)), minutes: Math.max(0, Math.round(Number(p.jplans[k].minutes) || pricing.jplans[k].minutes)) };
+    if (Number(p.overage) > 0 && Number(p.overage) < 5) out.overage = Math.round(Number(p.overage) * 100) / 100;
+    if (Number(p.proUpgrade) >= 0 && p.proUpgrade !== "" && p.proUpgrade != null) out.proUpgrade = Math.round(Number(p.proUpgrade));
     for (const k of Object.keys(pricing.terms)) { const v = Number(p.terms && p.terms[k]); if (v >= 0 && v < 0.5) out.terms[k] = { off: v }; }
     await sd().setJSON("pricing", out); await audit("", who, "pricing", JSON.stringify(out).slice(0, 380));
     return json(200, { pricing: await getPricing() });
@@ -90,3 +95,4 @@ export default async (req) => {
   return json(400, { error: "Unknown action." });
 };
 const PRICING_TERMS = (p) => Object.keys(p.terms);
+const JPLANS = ["lite", "standard", "pro"];
