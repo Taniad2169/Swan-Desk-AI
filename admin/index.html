@@ -100,12 +100,12 @@ function drawList() {
 function drawPrices() {
   const p = D.pricing;
   $("prices").innerHTML = `<div class="row">${Object.entries(D.agents).map(([k, a]) => `<div class="f"><label>${esc(a.name)} / month</label><input type="number" min="1" class="pa" data-k="${k}" value="${p.agent[k]}"></div>`).join("")}
-    <div class="f"><label>Any 2 agents / month</label><input type="number" min="1" id="b2" value="${p.bundle[2]}"></div><div class="f"><label>All 3 agents / month</label><input type="number" min="1" id="b3" value="${p.bundle[3]}"></div></div>
-    <div class="row"><div class="f"><label>Setup: 1 agent</label><input type="number" min="0" id="s1" value="${p.setup[1]}"></div><div class="f"><label>Setup: 2 agents</label><input type="number" min="0" id="s2" value="${p.setup[2]}"></div><div class="f"><label>Setup: 3 agents</label><input type="number" min="0" id="s3" value="${p.setup[3]}"></div></div>
+    <div class="f"><label>Any 2 agents / month</label><input type="number" min="1" id="b2" value="${p.bundle[2]}"></div><div class="f"><label>Any 3 agents / month</label><input type="number" min="1" id="b3" value="${p.bundle[3]}"></div><div class="f"><label>All 4 agents / month</label><input type="number" min="1" id="b4" value="${p.bundle[4]}"></div></div>
+    <div class="row"><div class="f"><label>Setup: 1 agent</label><input type="number" min="0" id="s1" value="${p.setup[1]}"></div><div class="f"><label>Setup: 2 agents</label><input type="number" min="0" id="s2" value="${p.setup[2]}"></div><div class="f"><label>Setup: 3 agents</label><input type="number" min="0" id="s3" value="${p.setup[3]}"></div><div class="f"><label>Setup: all 4</label><input type="number" min="0" id="s4" value="${p.setup[4]}"></div></div>
     <div class="row">${Object.entries(p.terms).filter(([k]) => k !== "monthly").map(([k, t]) => `<div class="f"><label>${esc(t.label)}: % off</label><input type="number" min="0" max="49" class="pt" data-k="${k}" value="${Math.round(t.off * 100)}"></div>`).join("")}</div>
     <p class="muted">A bundle never costs more than buying the same agents one by one.</p><button class="btn" id="pSave">Save prices</button>`;
   $("pSave").onclick = async () => {
-    const pricing = { agent: {}, bundle: { 2: $("b2").value, 3: $("b3").value }, setup: { 1: $("s1").value, 2: $("s2").value, 3: $("s3").value }, terms: {} };
+    const pricing = { agent: {}, bundle: { 2: $("b2").value, 3: $("b3").value, 4: $("b4").value }, setup: { 1: $("s1").value, 2: $("s2").value, 3: $("s3").value, 4: $("s4").value }, terms: {} };
     document.querySelectorAll(".pa").forEach((i) => pricing.agent[i.dataset.k] = i.value);
     document.querySelectorAll(".pt").forEach((i) => pricing.terms[i.dataset.k] = Number(i.value) / 100);
     try { D.pricing = (await SD.api("sd-admin", { action: "pricing", pricing })).pricing; toast("Prices saved"); drawNew(); load(); } catch (e) { toast(e.message); }

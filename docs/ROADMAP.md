@@ -43,3 +43,21 @@ Anyone who calls the demo number is interested, so Jennifer must get and save th
 Tania gets an email + SwanDesk admin chat message with those details and the recording, so she can call them right back.
 - Caller ID is saved on EVERY demo call automatically (with the recording), even if the caller gives no name or company.
 - "Who called?" lookup: match that phone number against Voice Studio leads and campaigns (who Rebecca called and gave Jennifer's number to), so Tania knows the practice and calls them back.
+
+## Step 5: Jonathan, the Legal Eagle (legal & compliance assistant), $299/month (Tania, Nov 23, 2026)
+**For doctors (and other practices):**
+- Reviews their legal documents and legal letters and explains them in plain language.
+- Website review: ADA/accessibility, cookie banner, privacy policy, HIPAA-safe forms; flags what is out of compliance and what to fix.
+- Monthly law & rule updates for their industry and state (privacy, ADA, advertising rules).
+- Drafts a privacy policy, cookie policy and accessibility statement for the client to review.
+- When something needs a lawyer, Jonathan says so plainly and advises them to consult an attorney.
+
+**For attorneys:** works as their legal assistant.
+- Document review, preparing for court, case presentations, drafting legal letters, and deep legal research.
+- Everything is a draft for the attorney's review; the attorney signs off.
+
+**Rules for Jonathan's prompt:**
+- Always says he is an AI assistant, not a lawyer, and does not give legal advice or create an attorney-client relationship.
+- Cites his sources on research and marks anything he is unsure of; never invents case law or citations.
+- Keeps clients' documents private to their own SwanDesk.
+- Uses Jonathan's voice (same voice as in the WebSwan AI Office).

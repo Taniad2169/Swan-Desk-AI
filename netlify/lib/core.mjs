@@ -9,15 +9,16 @@ export const ADMINS = ["thewebswann@gmail.com", "taniadomingue373@gmail.com"];
 export const AGENTS = {
   jennifer: { name: "Jennifer", role: "Receptionist & Appointment Setter", desc: "Answers your calls 24/7, books appointments on your calendar, takes messages, and makes warm follow-up calls only to people who asked you to call them back (like the contact you met at an event, or the homeowner who said 'call me in 3 months')." },
   eva: { name: "Eva", role: "Executive Assistant", desc: "Reads your inbox every morning and tells you what matters, prepares personalized email drafts (with PDFs and photos attached) for you to approve, keeps your follow-ups and tasks on track, and sends friendly holiday and market-update emails to your future clients." },
-  stan: { name: "Stan", role: "Social Media Content Creator", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and Google Business, with branded pictures and captions, and schedules them after you approve. Your videos go out on the dates you choose." }
+  stan: { name: "Stan", role: "Social Media Content Creator", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and Google Business, with branded pictures and captions, and schedules them after you approve. Your videos go out on the dates you choose." },
+  jonathan: { name: "Jonathan", role: "Legal Eagle · Legal & Compliance Assistant", desc: "For doctors: reviews your documents, legal letters and website so your practice stays in compliance (ADA, privacy, cookie and HIPAA forms), keeps you updated on new rules in your state, drafts your privacy policy, cookie policy and accessibility statement, and tells you when it's time to consult an attorney. For attorneys: your legal assistant who reviews documents, helps you prepare for court, builds case presentations, drafts legal letters and does deep research for your review. Jonathan is an AI assistant, not a lawyer, and does not give legal advice." }
 };
 export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
-// Prices (USD per month). Setup: 1-2 agents $299, all 3 $499. Prepaying reduces the price.
+// Prices (USD per month). Setup: 1-2 agents $299, 3 agents $499, all 4 $599. Prepaying reduces the price.
 export const PRICING = {
-  agent: { jennifer: 349, eva: 199, stan: 199 },
-  bundle: { 2: 499, 3: 699 },
-  setup: { 1: 299, 2: 299, 3: 499 },
+  agent: { jennifer: 349, eva: 199, stan: 199, jonathan: 299 },
+  bundle: { 2: 499, 3: 699, 4: 949 },
+  setup: { 1: 299, 2: 299, 3: 499, 4: 599 },
   terms: { monthly: { months: 1, off: 0, label: "Monthly" }, quarterly: { months: 3, off: 0.05, label: "Every 3 months" }, semiannual: { months: 6, off: 0.10, label: "Every 6 months" }, annual: { months: 12, off: 0.15, label: "Once a year" } }
 };
 export async function getPricing() {
@@ -71,7 +72,12 @@ export const json = (status, body) => new Response(JSON.stringify(body), { statu
 
 // ---------- clients (tenants) ----------
 export async function tenants() { return (await sd().get("tenants", { type: "json" })) || []; }
-export async function tenant(id) { return id ? await sd().get("t-" + id, { type: "json" }) : null; }
+// Agents added after a client was created (e.g. Jonathan) show up as "locked" (not on their plan) instead of missing.
+export async function tenant(id) {
+  const t = id ? await sd().get("t-" + id, { type: "json" }) : null;
+  if (t) { t.agents = t.agents || {}; for (const a of Object.keys(AGENTS)) if (!t.agents[a]) t.agents[a] = { state: "locked", since: new Date().toISOString() }; }
+  return t;
+}
 export async function saveTenant(t) {
   t.updatedAt = new Date().toISOString();
   await sd().setJSON("t-" + t.id, t);

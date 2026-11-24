@@ -81,8 +81,8 @@ export default async (req) => {
   if (b.action === "pricing") {
     const p = b.pricing || {}, out = { agent: {}, bundle: {}, setup: {}, terms: {} };
     for (const a of Object.keys(AGENTS)) if (Number(p.agent && p.agent[a]) > 0) out.agent[a] = Math.round(Number(p.agent[a]));
-    for (const n of [2, 3]) if (Number(p.bundle && p.bundle[n]) > 0) out.bundle[n] = Math.round(Number(p.bundle[n]));
-    for (const n of [1, 2, 3]) if (Number(p.setup && p.setup[n]) >= 0 && p.setup && p.setup[n] !== "") out.setup[n] = Math.round(Number(p.setup[n]));
+    for (const n of [2, 3, 4]) if (Number(p.bundle && p.bundle[n]) > 0) out.bundle[n] = Math.round(Number(p.bundle[n]));
+    for (const n of [1, 2, 3, 4]) if (Number(p.setup && p.setup[n]) >= 0 && p.setup && p.setup[n] !== "") out.setup[n] = Math.round(Number(p.setup[n]));
     for (const k of Object.keys(pricing.terms)) { const v = Number(p.terms && p.terms[k]); if (v >= 0 && v < 0.5) out.terms[k] = { off: v }; }
     await sd().setJSON("pricing", out); await audit("", who, "pricing", JSON.stringify(out).slice(0, 380));
     return json(200, { pricing: await getPricing() });
