@@ -15,12 +15,12 @@ export const AGENTS = {
 export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
 // Prices (USD per month), approved by Tania with Clara's review (Nov 23, 2026). Setup: 1-2 agents $299, 3 agents $499, all 4 $599.
-// Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute. Minimum margin: 50% at worst-case cost.
+// Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute.
 export const PRICING_VERSION = 2;
 export const PRICING = {
   agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
   jplans: { lite: { label: "Lite", minutes: 600, price: 299 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
-  overage: 0.25, proUpgrade: 300,  // Tania's rule: at least 50% margin even at worst-case outbound cost
+  overage: 0.25, proUpgrade: 300,
   bundle: { 2: 549, 3: 799, 4: 949 },
   setup: { 1: 299, 2: 299, 3: 499, 4: 599 },
   terms: { monthly: { months: 1, off: 0, label: "Monthly" }, quarterly: { months: 3, off: 0.05, label: "Every 3 months" }, semiannual: { months: 6, off: 0.10, label: "Every 6 months" }, annual: { months: 12, off: 0.15, label: "Once a year" } }
@@ -133,8 +133,8 @@ export async function audit(tenantId, who, action, detail) {
 export const PARTNER_DEFAULTS = {
   status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 299, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
   addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
-  // Worst-case cost assumptions for the margin check (editable). Phone = carrier + telephony; voice = AI voice agent + AI brain reserve.
-  cost: { phonePerMin: 0.0365, voicePerMin: 0.06, number: 1.15, eva: 60, stan: 45, jonathan: 80, fixed: 234, hosting: 50, card: 0.03 }
+  // Cost assumptions are private: they live in the SD_PARTNER_COSTS environment variable on Netlify, not in this (public) code.
+  cost: { phonePerMin: 0, voicePerMin: 0, number: 0, eva: 0, stan: 0, jonathan: 0, fixed: 0, hosting: 0, card: 0, ...(() => { try { return JSON.parse(process.env.SD_PARTNER_COSTS || "{}"); } catch { return {}; } })() }
 };
 export async function partners() { return (await sd().get("partners", { type: "json" })) || []; }
 export async function partner(id) { return id ? (await partners()).find((p) => p.id === id) || null : null; }
@@ -142,7 +142,7 @@ export function withPartnerDefaults(p) {
   const d = PARTNER_DEFAULTS;
   return { ...d, ...p, addons: { ...d.addons, ...(p.addons || {}) }, cost: { ...d.cost, ...(p.cost || {}) } };
 }
-// The partner's monthly bill and WebSwan's worst-case margin (every client using all included minutes).
+// The partner's monthly bill and a private profit check (cost assumptions come from a Netlify secret).
 export function partnerInvoice(p, clients) {
   p = withPartnerDefaults(p);
   const n = clients.length, extra = Math.max(0, n - p.includedClients);

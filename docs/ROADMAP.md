@@ -67,10 +67,9 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - Eva $249 (with deep research, about 40 reports/month), Jonathan $299, Rosie $249 (social media, Google Business, graphics; posts directly to client accounts like Sonny at Marblism; Content360 is never used for clients).
 - Bundles: any 2 up to $549, any 3 up to $799, all 4 $949; bundles include Jennifer Standard; Jennifer Pro inside a bundle +$300.
 - Setup: $299 (1-2 agents), $499 (3), $599 (all 4).
-- Clara: lowest safe prices Jennifer Lite $89 / Standard $189 / Pro $429, Eva $119, Jonathan $159, Rosie $99; fixed costs about $134/month; one Full Desk client covers them.
 - Before launch (Gips): usage metering, automatic billing, alerts at 75/90/100%, client allowance dashboard, HIPAA BAAs with every vendor used for doctor clients.
-- UPDATE Nov 23, 11:25 PM: Tania's rule is a 50% minimum margin even at worst-case cost (outbound calling about $0.10/min + 10% AI reserve + fixed share + 3% card fees). Jennifer Pro changed to 3,000 minutes at $649 (51%; 4,000 minutes would need $849) and extra minutes to $0.25 (59%). Every other price already clears 50%.
-- UPDATE Nov 23, 11:28 PM: Jennifer Lite raised to $299 (600 min) because she does both inbound and outbound; worst-case margin about 75%.
+- UPDATE Nov 23, 11:25 PM: Jennifer Pro changed to 3,000 minutes at $649 and extra minutes to $0.25.
+- UPDATE Nov 23, 11:28 PM: Jennifer Lite raised to $299 (600 min) because she does both inbound and outbound.
 
 ## Usage & billing (approved by Tania with Gips, Nov 23, 2026), to build next
 - Stripe: card saved at sign-up (Stripe keeps it; SwanDesk shows only the masked card and receipts), automatic monthly subscription, and overage billing the client explicitly authorizes at sign-up. Itemized monthly receipts. No duplicate charges; usage must be accurate; only admins change prices.
@@ -79,7 +78,7 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 - At 100%: outbound pauses automatically until the client authorizes more spending or upgrades. Inbound follows the client's own choice made at sign-up: keep answering at $0.25/min (up to their spending cap) OR forward calls to their office. Spending cap is set by the client.
 - End of billing cycle: Stripe charges the authorized overage automatically.
 - Client dashboard (Settings / Usage): plan, minutes used/left (inbound/outbound), % used, current overage, other agents' allowances.
-- CEO dashboard: per-client revenue, usage, estimated cost, PROFIT MARGIN with a flag when an account falls below the 50% target, payment status.
+- CEO dashboard: per-client revenue, usage, estimated cost, PROFIT MARGIN, payment status.
 - HIPAA: signed BAAs and security controls with every vendor before medical clients use SwanDesk with patient information.
 - Public pricing table lives on /demo/#pricing (customer prices only; costs and margins never public).
 
@@ -87,7 +86,7 @@ Tania gets an email + SwanDesk admin chat message with those details and the rec
 ## B2B partners (built Nov 24, 2026, private admin only)
 - One SwanDesk code base; a partner's customers are normal client workspaces tagged with the partner (separate data per client).
 - Partner record: status (draft/pilot/active/ended), deal type (managed minutes or bring-your-own phone), who pays phone minutes and AI voice minutes, monthly fee, clients included, extra-client fee, minutes per client, overage, setup, add-on prices, link button to the partner's platform.
-- Admin shows the partner's monthly bill and WebSwan's worst-case margin (red under 50%). Partner prices are never sent to client pages.
+- Admin shows the partner's monthly bill and a private profit check (cost assumptions live in a Netlify secret, not in this code). Partner prices are never sent to client pages.
 - All partner prices are drafts until the CEO approves Clara's numbers and an attorney reviews the agreement (Jonathan's checklist).
 - Still to build: per-client usage tracking, partner portal, connecting a partner's own phone provider.
 - Nov 24, 2026: license deals added (CEO's idea): one-time license fee (draft $15,000) + hosting & maintenance (draft $299/month), or a $499/month platform fee with no license. The partner brings its own phone provider, voice AI and AI keys for Eva, Jonathan and Rosie. WebSwan hosts and maintains; the partner sells to its own customers. License = right to use the hosted service, never the source code.
