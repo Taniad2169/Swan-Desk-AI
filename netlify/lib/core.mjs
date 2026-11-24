@@ -16,6 +16,7 @@ export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
 // Prices (USD per month), approved by Tania with Clara's review (Nov 23, 2026). Setup: 1-2 agents $299, 3 agents $499, all 4 $599.
 // Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute. Minimum margin: 50% at worst-case cost.
+export const PRICING_VERSION = 2;
 export const PRICING = {
   agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
   jplans: { lite: { label: "Lite", minutes: 600, price: 299 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
@@ -25,7 +26,9 @@ export const PRICING = {
   terms: { monthly: { months: 1, off: 0, label: "Monthly" }, quarterly: { months: 3, off: 0.05, label: "Every 3 months" }, semiannual: { months: 6, off: 0.10, label: "Every 6 months" }, annual: { months: 12, off: 0.15, label: "Once a year" } }
 };
 export async function getPricing() {
-  const saved = (await sd().get("pricing", { type: "json" }).catch(() => null)) || {};
+  // Prices saved before the Nov 23, 2026 approval (no version 2) are ignored, so old numbers can't override the approved prices.
+  let saved = (await sd().get("pricing", { type: "json" }).catch(() => null)) || {};
+  if (saved.version !== PRICING_VERSION) saved = {};
   const jplans = Object.fromEntries(Object.entries(PRICING.jplans).map(([k, v]) => [k, { ...v, ...((saved.jplans || {})[k] || {}) }]));
   return { jplans, overage: saved.overage ?? PRICING.overage, proUpgrade: saved.proUpgrade ?? PRICING.proUpgrade, agent: { ...PRICING.agent, ...(saved.agent || {}), jennifer: jplans.standard.price }, bundle: { ...PRICING.bundle, ...(saved.bundle || {}) }, setup: { ...PRICING.setup, ...(saved.setup || {}) }, terms: Object.fromEntries(Object.entries(PRICING.terms).map(([k, v]) => [k, { ...v, ...((saved.terms || {})[k] || {}) }])) };
 }

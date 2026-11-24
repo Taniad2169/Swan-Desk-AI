@@ -1,5 +1,5 @@
 // SwanDesk AI admin API (Tania only): clients, agent switches, non-payment switch, billing terms, prices, upgrade requests, audit log.
-import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal,
+import { whoIs, isAdmin, sameSite, json, clean, isEmail, AGENTS, AGENT_STATES, getPricing, priceFor, termTotal, PRICING_VERSION,
   sd, tenants, tenant, saveTenant, newTenant, audit } from "../lib/core.mjs";
 
 function summary(t, pricing) {
@@ -81,7 +81,7 @@ export default async (req) => {
     return json(200, { ok: true });
   }
   if (b.action === "pricing") {
-    const p = b.pricing || {}, out = { agent: {}, bundle: {}, setup: {}, terms: {} };
+    const p = b.pricing || {}, out = { version: PRICING_VERSION, agent: {}, bundle: {}, setup: {}, terms: {} };
     for (const a of Object.keys(AGENTS)) if (Number(p.agent && p.agent[a]) > 0) out.agent[a] = Math.round(Number(p.agent[a]));
     for (const n of [2, 3, 4]) if (Number(p.bundle && p.bundle[n]) > 0) out.bundle[n] = Math.round(Number(p.bundle[n]));
     for (const n of [1, 2, 3, 4]) if (Number(p.setup && p.setup[n]) >= 0 && p.setup && p.setup[n] !== "") out.setup[n] = Math.round(Number(p.setup[n]));
