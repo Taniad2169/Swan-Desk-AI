@@ -30,7 +30,7 @@ const kClients = (p) => `wp-${p}-note`, kCalls = (p) => `wp-${p}-calls`, kAppts 
 
 function boardRow(t, note) {
   return { id: t.id, business: t.business, industry: t.industry, ownerName: t.ownerName, phone: t.phone, emails: t.emails, status: t.status, statusNote: t.statusNote,
-    agents: t.agents, billing: { term: t.billing.term }, createdAt: t.createdAt, note: (note && note.note) || "", color: (note && note.color) || "" };
+    agents: t.agents, billing: { term: t.billing.term }, createdAt: t.createdAt, note: (note && note.note) || "", color: (note && note.color) || "", state: (note && note.state) || "" };
 }
 
 export default async (req) => {
@@ -58,11 +58,12 @@ export default async (req) => {
     return jsonCors(200, { partner: { id: p.id, name: p.name, edition: p.edition }, agents: Object.fromEntries(Object.entries(AGENTS).map(([k, a]) => [k, { name: a.name, role: a.role, included: allowedAgents.includes(k) }])), clients, admin: isAdmin(who) && !b.as }, req);
   }
 
-  // ---------- Customer Management: profile note (up to 5,000 characters) + color tag. Never touches the real record. ----------
+  // ---------- Customer Management: profile note (up to 5,000 characters) + color tag + state. WorkPilot's own
+  // data (a "state" field the real tenant record has no place for), never written into the real record. ----------
   if (b.action === "note_save") {
     const id = clean(b.id, 32); if (!id || !(await ownsClient(id))) return jsonCors(404, { error: "Customer not found." }, req);
     const notes = (await sd().get(kClients(p.id), { type: "json" })) || {};
-    notes[id] = { note: clean(b.note, 5000), color: COLORS.includes(b.color) ? b.color : "", at: new Date().toISOString() };
+    notes[id] = { note: clean(b.note, 5000), color: COLORS.includes(b.color) ? b.color : "", state: clean(b.state, 30), at: new Date().toISOString() };
     await sd().setJSON(kClients(p.id), notes);
     return jsonCors(200, { ok: true }, req);
   }
