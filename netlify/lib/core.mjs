@@ -10,15 +10,17 @@ export const AGENTS = {
   jennifer: { name: "Jennifer", role: "Receptionist & Appointment Setter", desc: "Answers your calls 24/7, books appointments on your calendar, takes messages, and makes warm follow-up calls only to people who asked you to call them back (like the contact you met at an event, or the homeowner who said 'call me in 3 months')." },
   eva: { name: "Eva", role: "Executive Assistant & Researcher", desc: "Reads your inbox every morning and tells you what matters, prepares personalized email drafts (with PDFs and photos attached) for you to approve, keeps your follow-ups and tasks on track, sends friendly holiday and market-update emails to your future clients, and does deep research for you (about 40 research reports a month)." },
   stan: { name: "Rosie", role: "Social Media, Google Business & Graphic Designer", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and your Google Business Profile, designs the branded pictures in your colors, writes the captions, and publishes them straight to your accounts after you approve (about 30 posts a month, up to 5 accounts plus Google Business)." },
-  jonathan: { name: "Jonathan", role: "Legal Eagle · Legal & Compliance Assistant", desc: "For doctors: reviews your documents, legal letters and website so your practice stays in compliance (ADA, privacy, cookie and HIPAA forms), keeps you updated on new rules in your state, drafts your privacy policy, cookie policy and accessibility statement, and tells you when it's time to consult an attorney. For attorneys: your legal assistant who reviews documents, helps you prepare for court, builds case presentations, drafts legal letters and does deep research for your review. Jonathan is an AI assistant, not a lawyer, and does not give legal advice." }
+  jonathan: { name: "Jonathan", role: "Legal Eagle · Legal & Compliance Assistant", desc: "For doctors: reviews your documents, legal letters and website so your practice stays in compliance (ADA, privacy, cookie and HIPAA forms), keeps you updated on new rules in your state, drafts your privacy policy, cookie policy and accessibility statement, and tells you when it's time to consult an attorney. For attorneys: your legal assistant who reviews documents, helps you prepare for court, builds case presentations, drafts legal letters and does deep research for your review. Jonathan is an AI assistant, not a lawyer, and does not give legal advice." },
+  aleksander: { name: "Aleksander Reid", role: "SDR & Sales Coach · Researcher", desc: "Listens to Jennifer's calls -- both the ones she answers and the warm outbound calls she makes -- and coaches her: what landed, what to say differently, patterns across calls, so she keeps getting sharper. Digs up real research on prospects and their market before any outreach goes out, the way a seasoned SDR would, and hands Eva punchy, researched email copy to send instead of generic templates. Aleksander doesn't take calls himself -- he's the coach and researcher behind the scenes." }
 };
 export const AGENT_STATES = ["locked", "active", "paused", "suspended"];
 
 // Prices (USD per month), approved by Tania with Clara's review (Nov 23, 2026). Setup: 1-2 agents $299, 3 agents $499, all 4 $599.
 // Jennifer has 3 minute plans; bundles include Jennifer Standard, and Jennifer Pro adds proUpgrade inside a bundle. Extra minutes: overage per minute.
+// Aleksander (Nov 24) is new and his $279 price (and the setup/bundle tiers, still only sized for up to 4 agents) is a DRAFT -- not yet reviewed the way the other four were.
 export const PRICING_VERSION = 2;
 export const PRICING = {
-  agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299 },
+  agent: { jennifer: 349, eva: 249, stan: 249, jonathan: 299, aleksander: 279 },
   jplans: { lite: { label: "Lite", minutes: 600, price: 299 }, standard: { label: "Standard", minutes: 1500, price: 349 }, pro: { label: "Pro", minutes: 3000, price: 649 } },
   overage: 0.25, proUpgrade: 300,
   bundle: { 2: 549, 3: 799, 4: 949 },
@@ -221,9 +223,9 @@ export async function audit(tenantId, who, action, detail) {
 export const PARTNER_DEFAULTS = {
   edition: "voice", maxClients: 25, admins: [],
   status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 499, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
-  addons: { eva: 149, stan: 129, jonathan: 189 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
+  addons: { eva: 149, stan: 129, jonathan: 189, aleksander: 169 }, phonePaidBy: "partner", voicePaidBy: "partner", linkUrl: "", linkLabel: "", website: "", contact: "", notes: "", pilotEnds: "",
   // Cost assumptions are private: they live in the SD_PARTNER_COSTS environment variable on Netlify, not in this (public) code.
-  cost: { phonePerMin: 0, voicePerMin: 0, number: 0, eva: 0, stan: 0, jonathan: 0, fixed: 0, hosting: 0, card: 0, ...(() => { try { return JSON.parse(process.env.SD_PARTNER_COSTS || "{}"); } catch { return {}; } })() }
+  cost: { phonePerMin: 0, voicePerMin: 0, number: 0, eva: 0, stan: 0, jonathan: 0, aleksander: 0, fixed: 0, hosting: 0, card: 0, ...(() => { try { return JSON.parse(process.env.SD_PARTNER_COSTS || "{}"); } catch { return {}; } })() }
 };
 export async function partners() { return (await sd().get("partners", { type: "json" })) || []; }
 export async function partner(id) { return id ? (await partners()).find((p) => p.id === id) || null : null; }
@@ -257,7 +259,7 @@ export function partnerInvoice(p, clients) {
 export const CONNECTIONS = {
   phone: { label: "Phone provider", providers: ["Twilio", "RingCentral", "Telnyx", "Plivo", "Vonage", "SignalWire", "Other"], fields: { account: "Account SID / ID", secret: "Auth token / API key", numbers: "Phone numbers (comma separated)" } },
   voice: { label: "Voice AI (Jennifer's voice)", providers: ["Cartesia", "Retell AI", "Vapi", "ElevenLabs", "Other"], fields: { secret: "API key", agent: "Agent / assistant ID" } },
-  brain: { label: "AI brain for Eva, Jonathan & Rosie", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
+  brain: { label: "AI brain for Eva, Jonathan, Rosie & Aleksander", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
   research: { label: "Research search (Eva & Jonathan)", providers: ["Perplexity", "Brave Search", "Other"], fields: { secret: "API key" } },
   design: { label: "Graphics & posting (Rosie)", providers: ["Canva", "Content scheduler", "Other"], fields: { secret: "API key / token" } }
 };
