@@ -57,6 +57,14 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <button class="btn" id="nGo">Create client workspace</button>
   </section>
 
+  <section class="card"><h2>🎬 2-hour demo link</h2>
+    <p class="muted">Creates a one-time link to the sample SwanDesk dashboard (not a real client's data) for a prospect to click around on their own, no Google account needed. The clock starts the moment they open it, runs for exactly 2 hours, and the link never works again after that -- whether it ran out or you revoked it below.</p>
+    <div class="row"><div class="f"><label for="dmLabel">Who's this for? (your own note, optional)</label><input id="dmLabel" placeholder="Dr. Conger, Conger Chiropractic"></div></div>
+    <button class="btn" id="dmGo">Create demo link</button>
+    <div id="dmResult" class="muted" style="margin-top:8px"></div>
+    <div id="dmList" style="margin-top:14px"></div>
+  </section>
+
   <section class="card"><h2>👥 Clients</h2><div id="list"><p class="muted">Loading…</p></div></section>
 
   <section class="card"><h2>💲 Prices</h2><div id="prices"></div></section>
@@ -230,7 +238,37 @@ async function loadVault(box, v) {
   box.querySelector(".vsave").onclick = () => { const vault = {}; box.querySelectorAll(".vrow").forEach((r) => { const x = { provider: r.querySelector(".vprov").value }; r.querySelectorAll(".vf").forEach((i) => x[i.dataset.f] = i.value); vault[r.dataset.k] = x; }); send(vault); };
   box.querySelectorAll(".vclr").forEach((b) => b.onclick = () => { if (confirm("Remove this connection and its saved key?")) send({ [b.closest(".vrow").dataset.k]: { clear: true } }); });
 }
-async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); drawPartners(); } catch (e) { toast(e.message); } }
+async function load() { try { D = await SD.api("sd-admin", { action: "list" }); drawReqs(); drawList(); if (!$("nA").innerHTML) drawNew(); drawPrices(); drawPartners(); } catch (e) { toast(e.message); } loadDemos(); }
+
+// ---------- 2-hour demo links ----------
+function demoStatusText(d) {
+  if (d.status === "expired") return d.startedAt ? "Ended" : "Revoked (never opened)";
+  if (d.status === "pending") return "Not opened yet";
+  const left = (d.expiresAt || 0) - Date.now();
+  return left > 0 ? "Live -- " + Math.max(1, Math.round(left / 60000)) + " min left" : "Ending…";
+}
+async function loadDemos() {
+  try {
+    const r = await SD.api("sd-demo", { action: "list" });
+    $("dmList").innerHTML = (r.demos.length ? r.demos : []).map((d) => `
+      <div class="row" style="align-items:center;border-bottom:1px solid var(--line);padding:6px 0">
+        <div><b>${esc(d.label || "(no note)")}</b> <span class="muted">· ${demoStatusText(d)} · made ${esc(new Date(d.createdAt).toLocaleString())}</span></div>
+        <div style="text-align:right">
+          ${d.status !== "expired" ? `<button class="btn ghost sm" data-copy="${esc(d.link)}">Copy link</button> <button class="btn ghost sm" data-revoke="${esc(d.link)}">Revoke</button>` : ""}
+        </div></div>`).join("") || "<p class=\"muted\">No demo links yet.</p>";
+    document.querySelectorAll("[data-copy]").forEach((b) => b.onclick = () => { navigator.clipboard.writeText(location.origin + "/demo/live/?t=" + b.dataset.copy).then(() => toast("Link copied")); });
+    document.querySelectorAll("[data-revoke]").forEach((b) => b.onclick = async () => { try { await SD.api("sd-demo", { action: "revoke", link: b.dataset.revoke }); toast("Revoked -- that link no longer works."); loadDemos(); } catch (e) { toast(e.message); } });
+  } catch (e) { toast(e.message); }
+}
+$("dmGo").onclick = async () => {
+  try {
+    const r = await SD.api("sd-demo", { action: "create", label: $("dmLabel").value });
+    $("dmLabel").value = "";
+    $("dmResult").innerHTML = `✅ <a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a> <button class="btn ghost sm" id="dmCopyNow">Copy</button> <span class="muted">— good for 2 hours from when they open it.</span>`;
+    $("dmCopyNow").onclick = () => navigator.clipboard.writeText(r.url).then(() => toast("Link copied"));
+    loadDemos();
+  } catch (e) { toast(e.message); }
+};
 $("nGo").onclick = async () => {
   const agents = [...document.querySelectorAll(".nAg:checked")].map((c) => c.value);
   try { await SD.api("sd-admin", { action: "create", business: $("nB").value, ownerName: $("nO").value, industry: $("nI").value, phone: $("nP").value, emails: $("nE").value, agents, term: $("nT").value, jplan: $("nJ").value, partnerId: $("nPt").value });
@@ -248,7 +286,7 @@ $("outBtn").onclick = () => SD.signOut();
 window.addEventListener("sd-auth", async (e) => {
   const u = e.detail.user; $("outBtn").hidden = !u; $("who").textContent = u ? u.email : "";
   if (!u) { $("gate").hidden = false; $("app").hidden = true; return; }
-  try { D = await SD.api("sd-admin", { action: "list" }); $("gate").hidden = true; $("app").hidden = false; drawReqs(); drawList(); drawNew(); drawPrices(); drawPartners(); }
+  try { D = await SD.api("sd-admin", { action: "list" }); $("gate").hidden = true; $("app").hidden = false; drawReqs(); drawList(); drawNew(); drawPrices(); drawPartners(); loadDemos(); }
   catch (x) { $("gate").hidden = false; $("app").hidden = true; $("gateMsg").textContent = x.message; }
 });
 </script>

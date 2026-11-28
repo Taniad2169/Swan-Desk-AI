@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwanDesk AI · Your demo</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../img/ws-logo.png">
+<link rel="stylesheet" href="../../style.css">
+<style>
+body{-webkit-user-select:none;user-select:none}
+input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:text;user-select:text}
+.timer{font-weight:800;color:#fff;background:rgba(0,0,0,.18);border-radius:999px;padding:6px 14px;font-size:.9rem}
+.timer.low{background:#ba2623}
+.ended{text-align:center;padding:40px 16px}
+.ended .ico{font-size:2.4rem;margin-bottom:10px}
+.demo-tag{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0d68a;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700;margin-bottom:8px}
+</style>
+<script>
+// Tania, Nov 27: "make sure my page source is locked no one can copy and paste nowhere" -- same lock already on
+// the main dashboard, admin page, Studio, Video Maker and WorkPilot: deters casual right-click/drag-select/
+// view-source copying. It can't stop someone who opens dev tools before this runs or reads the network tab --
+// no client-side script can fully block that for a page the browser must download to show it.
+(function(){
+  document.addEventListener('contextmenu',function(e){e.preventDefault()});
+  document.addEventListener('dragstart',function(e){e.preventDefault()});
+  document.addEventListener('keydown',function(e){
+    var k=(e.key||'').toUpperCase();
+    if(k==='F12'||(e.ctrlKey&&e.shiftKey&&(k==='I'||k==='J'||k==='C'))||(e.ctrlKey&&k==='U')){e.preventDefault()}
+  });
+  console.log('%cThe WebSwan','font-size:20px;font-weight:800;color:#12233a','\nThis app and its code belong to The WebSwan. Please don\'t copy or reuse it without permission.');
+})();
+</script>
+</head>
+<body>
+<header class="top"><img src="../../img/ws-logo.png" alt="WebSwan"><div><h1>SwanDesk-AI</h1><small>Your Business. Your AI Team. One Smart Desk.</small></div><span class="sp"></span>
+  <span class="timer" id="timer" hidden></span></header>
+
+<main class="wrap" id="app" hidden>
+  <section class="card">
+    <span class="demo-tag">Demo · sample workspace</span>
+    <h2 id="biz">SwanDesk AI</h2>
+    <p class="muted">This is a real look at the dashboard, with sample data standing in for a client's own business. Nothing you click here is saved -- your own SwanDesk, with your real business, is set up after you sign up.</p>
+  </section>
+  <section class="grid3" id="agents"></section>
+  <section class="card" style="text-align:center;margin-top:16px">
+    <h2>Like what you see?</h2>
+    <p class="muted">Book a free call and we'll set up your own SwanDesk, built around your business.</p>
+    <a class="btn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a>
+    <p class="muted" style="margin-top:12px">Or call Rachel at <a href="tel:+13162486839"><b>(316) 248-6839</b></a> for any question about SwanDesk AI.</p>
+  </section>
+</main>
+
+<main class="wrap" id="endedBox" hidden>
+  <section class="card ended">
+    <div class="ico">🔒</div>
+    <h2 id="endedTitle">This demo has ended</h2>
+    <p class="muted" id="endedMsg">Demo links are good for 2 hours from when they're first opened, and this one has closed. Ask WebSwan for a new link, or book a call below.</p>
+    <a class="btn" href="mailto:designs@thewebswan.com?subject=SwanDesk%20AI%20demo">Book your free demo</a>
+  </section>
+</main>
+<main class="wrap" id="loadingBox"><section class="card"><p class="muted">Opening your demo…</p></section></main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const toast = (t) => { const e = $("toast"); e.textContent = t; e.style.display = "block"; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = "none", 4000); };
+const LABEL = { active: "Active", paused: "Paused", suspended: "Unavailable", locked: "Not on your plan" };
+const token = new URLSearchParams(location.search).get("t") || "";
+let W = null, expiresAt = 0, tick = null, poll = null;
+
+function showEnded(msg) {
+  clearInterval(tick); clearInterval(poll);
+  $("app").hidden = true; $("loadingBox").hidden = true; $("timer").hidden = true;
+  if (msg) $("endedMsg").textContent = msg;
+  $("endedBox").hidden = false;
+}
+
+async function callStart() {
+  const r = await fetch("/.netlify/functions/sd-demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", token }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "This demo link isn't valid.");
+  return j;
+}
+
+function draw() {
+  $("agents").innerHTML = Object.entries(W.agents).map(([k, a]) => `
+    <article class="agent ${a.state === "locked" ? "locked" : ""}" tabindex="0" data-k="${k}">
+      <div class="av" aria-hidden="true">${esc(a.name[0])}</div>
+      <h3>${esc(a.name)}</h3><div class="role">${esc(a.role)}</div>
+      <span class="pill ${a.state}">${LABEL[a.state] || a.state}</span>
+      <div class="desc">${esc(a.desc)}</div>
+      ${a.state === "locked" ? `<p class="muted" style="margin:10px 0 6px">Hover or tap to see what ${esc(a.name)} can do for you.</p><button class="btn sm" data-req="${k}">I'm interested in ${esc(a.name)}</button>` : ""}
+      ${a.state === "active" ? `<p class="muted">${esc(a.name)} is set up for you.</p><button class="btn ghost sm" data-pause="${k}">Pause ${esc(a.name)}</button>` : ""}
+      ${a.state === "paused" ? `<button class="btn sm" data-resume="${k}">Resume ${esc(a.name)}</button>` : ""}
+    </article>`).join("");
+  // Demo-only: pause/resume and "I'm interested" never touch a server -- there's no real workspace behind this,
+  // so this just flips the card in front of you and says so plainly.
+  document.querySelectorAll("[data-req]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); toast("This is a demo -- your own SwanDesk lets you turn on " + b.dataset.req + " for real."); });
+  document.querySelectorAll("[data-pause]").forEach((b) => b.onclick = () => { W.agents[b.dataset.pause].state = "paused"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); });
+  document.querySelectorAll("[data-resume]").forEach((b) => b.onclick = () => { W.agents[b.dataset.resume].state = "active"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); });
+  document.querySelectorAll(".agent.locked").forEach((c) => c.onclick = () => c.classList.toggle("show"));
+}
+
+function fmt(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return (h ? h + ":" : "") + String(m).padStart(h ? 2 : 1, "0") + ":" + String(sec).padStart(2, "0");
+}
+function startTimer() {
+  $("timer").hidden = false;
+  tick = setInterval(() => {
+    const left = expiresAt - Date.now();
+    if (left <= 0) { showEnded(); return; }
+    $("timer").textContent = "⏱ " + fmt(left) + " left";
+    $("timer").classList.toggle("low", left < 5 * 60 * 1000);
+  }, 1000);
+  // Re-checks with the server every 5 minutes too, so an early revoke from the admin side (or the window
+  // genuinely closing) ends the demo here even if nobody touches anything in the meantime.
+  poll = setInterval(async () => { try { const j = await callStart(); expiresAt = j.expiresAt; } catch (e) { showEnded(e.message); } }, 5 * 60 * 1000);
+}
+
+(async function init() {
+  if (!token) { $("loadingBox").hidden = true; showEnded("This link is missing its demo code. Please ask WebSwan for the full link."); return; }
+  try {
+    const j = await callStart();
+    expiresAt = j.expiresAt; W = j.workspace;
+    $("loadingBox").hidden = true; $("app").hidden = false; $("biz").textContent = W.business;
+    draw(); startTimer();
+  } catch (e) {
+    $("loadingBox").hidden = true; showEnded(e.message);
+  }
+})();
+</script>
+</body>
+</html>
