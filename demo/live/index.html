@@ -15,6 +15,25 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
 .ended{text-align:center;padding:40px 16px}
 .ended .ico{font-size:2.4rem;margin-bottom:10px}
 .demo-tag{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0d68a;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700;margin-bottom:8px}
+.deskwrap{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
+@media (max-width:760px){.deskwrap{grid-template-columns:1fr}}
+.roster{background:#fff;border:1px solid var(--line,#ccd5e0);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.roster button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid transparent;background:none;border-radius:12px;padding:10px;cursor:pointer;font:inherit}
+.roster button:hover,.roster button.sel{background:#f4f9fe;border-color:var(--line,#ccd5e0)}
+.roster .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--blue,#1c6fd1),var(--sky,#58b7ec));flex:none}
+.roster .nm{font-weight:700;font-size:.92rem}.roster .rl{font-size:.74rem;color:var(--muted,#64748b)}
+.stage{background:#fff;border:1px solid var(--line,#ccd5e0);border-radius:16px;padding:18px;min-height:340px}
+.chatbox{max-height:320px;overflow-y:auto;background:#f8fafc;border-radius:12px;padding:10px;margin:10px 0}
+.bub{margin:8px 0;padding:10px 13px;border-radius:12px;line-height:1.45;max-width:90%}
+.bub.you{background:#eef3f8;margin-left:auto}
+.bub.agent{background:#eaf6ee}
+.modalOverlay{position:fixed;inset:0;background:rgba(10,20,35,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modalCard{background:#fff;border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center}
+.modalCard .av{width:100px;height:100px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-size:2.2rem;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--blue,#1c6fd1),var(--sky,#58b7ec))}
+.modalCard .st{color:var(--muted,#64748b);margin:4px 0 16px}
+.modalRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.modalCheck{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--muted,#64748b)}
+.recRow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line,#ccd5e0);border-radius:12px;padding:10px 12px;margin:8px 0}
 </style>
 <script>
 // Tania, Nov 27: "make sure my page source is locked no one can copy and paste nowhere" -- same lock already on
@@ -40,19 +59,15 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
   <section class="card">
     <span class="demo-tag">Demo · sample workspace</span>
     <h2 id="biz">SwanDesk AI</h2>
-    <p class="muted">This is a real look at the dashboard, with sample data standing in for a client's own business. Nothing you click here is saved -- your own SwanDesk, with your real business, is set up after you sign up.</p>
+    <p class="muted">This is a real look at your dashboard, with sample data standing in for your own business. Pick a teammate on the left to talk to them -- type or use the mic. Nothing here is saved; your own SwanDesk, with your real business, is set up after you sign up.</p>
+    <button class="btn ghost sm" id="uploadBtn" style="margin-top:8px">📄 Upload a document</button>
   </section>
-  <section class="grid3" id="agents"></section>
 
-  <section class="card" style="margin-top:16px">
-    <h2>🎙️ Practice call with Rachel</h2>
-    <p class="muted">Rachel is Jennifer's name on the phone. Ask her anything you'd ask on a real call -- what SwanDesk AI does, what it costs, how setup works -- and she'll answer for real, out loud. This is free browser voice for the demo only, not our paid phone line -- want an actual live call instead? Call <a href="tel:+13162486839"><b>(316) 248-6839</b></a> anytime.</p>
-    <div id="rachelChat" style="margin-top:10px"></div>
-    <div class="row" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <input id="rachelQ" type="text" placeholder="Type a question for Rachel…" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line,#ccd5e0);border-radius:10px" />
-      <button class="btn sm" id="rachelAsk">Ask Rachel</button>
-      <button class="btn ghost sm" id="rachelMic" title="Speak your question" hidden>🎤 Speak</button>
-    </div>
+  <section class="deskwrap" style="margin-top:16px">
+    <nav class="roster" id="roster"></nav>
+    <section class="stage" id="stage">
+      <p class="muted" style="text-align:center;padding:40px 10px">👈 Pick a teammate to start talking.</p>
+    </section>
   </section>
 
   <section class="card" style="text-align:center;margin-top:16px">
@@ -68,6 +83,41 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <p class="muted" style="margin-top:12px">Or call Rachel at <a href="tel:+13162486839"><b>(316) 248-6839</b></a> for any question about SwanDesk AI.</p>
   </section>
 </main>
+
+<!-- Voice roleplay modal (Tania, Nov 27: "a mic with voice talk that will open the agent just like it does for
+     studio"): same shape as the AI Office's own roleplay modal -- Talk now / Stop / End conversation, headphones
+     and echo-filter options -- except there is no Cartesia checkbox here at all, because this demo never has a
+     paid option to toggle: it is always the browser's own free voice, full stop. -->
+<div class="modalOverlay" id="voiceModal" hidden>
+  <div class="modalCard">
+    <div class="av" id="vmAv"></div>
+    <h3 id="vmName"></h3>
+    <p class="st" id="vmStatus">Say hello, or press Talk now.</p>
+    <div class="modalRow">
+      <button class="btn" id="vmTalk">🎙️ Talk now</button>
+      <button class="btn ghost" id="vmStop">✋ Stop</button>
+      <button class="btn pri" id="vmEnd">End conversation</button>
+    </div>
+    <div class="modalCheck">
+      <label><input type="checkbox" id="vmPhones"> 🎧 I'm wearing headphones (I can interrupt)</label>
+    </div>
+    <div class="modalCheck">
+      <label><input type="checkbox" id="vmEcho" checked> 🔁 Echo filter</label>
+    </div>
+    <p class="st" style="margin-top:10px;font-weight:700">🆓 Free browser voice for this demo -- no Cartesia credits used.</p>
+  </div>
+</div>
+
+<!-- Live Recording -- Jennifer/Rachel only, since she's the one teammate who's actually on the phone. Sample
+     calls, clearly marked as such: there are no real clients yet, so there is nothing real to play. -->
+<div class="modalOverlay" id="recModal" hidden>
+  <div class="modalCard" style="max-width:480px;text-align:left">
+    <h3 style="text-align:center">📼 Jennifer's call recordings</h3>
+    <p class="muted" style="text-align:center">Demo · sample calls -- your own SwanDesk logs Jennifer's real calls here.</p>
+    <div id="recList"></div>
+    <p style="text-align:center;margin-top:14px"><button class="btn ghost sm" id="recClose">✕ Close</button></p>
+  </div>
+</div>
 
 <main class="wrap" id="endedBox" hidden>
   <section class="card ended">
@@ -102,24 +152,80 @@ async function callStart() {
   return j;
 }
 
+let selected = null; // currently open teammate's key, or null when showing the "pick someone" overview
+
 function draw() {
-  $("agents").innerHTML = Object.entries(W.agents).map(([k, a]) => `
-    <article class="agent ${a.state === "locked" ? "locked" : ""}" tabindex="0" data-k="${k}">
+  $("roster").innerHTML = Object.entries(W.agents).map(([k, a]) => `
+    <button data-pick="${k}" class="${k === selected ? "sel" : ""}">
       <div class="av" aria-hidden="true">${esc(a.name[0])}</div>
-      <h3>${esc(a.name)}</h3><div class="role">${esc(a.role)}</div>
-      <span class="pill ${a.state}">${LABEL[a.state] || a.state}</span>
-      <div class="desc">${esc(a.desc)}</div>
-      ${a.state === "locked" ? `<p class="muted" style="margin:10px 0 6px">Hover or tap to see what ${esc(a.name)} can do for you.</p><button class="btn sm" data-req="${k}">I'm interested in ${esc(a.name)}</button>` : ""}
-      ${a.state === "active" ? `<p class="muted">${esc(a.name)} is set up for you.</p><button class="btn ghost sm" data-pause="${k}">Pause ${esc(a.name)}</button>` : ""}
-      ${a.state === "paused" ? `<button class="btn sm" data-resume="${k}">Resume ${esc(a.name)}</button>` : ""}
-    </article>`).join("");
-  // Demo-only: pause/resume and "I'm interested" never touch a server -- there's no real workspace behind this,
-  // so this just flips the card in front of you and says so plainly.
-  document.querySelectorAll("[data-req]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); toast("This is a demo -- your own SwanDesk lets you turn on " + b.dataset.req + " for real."); });
-  document.querySelectorAll("[data-pause]").forEach((b) => b.onclick = () => { W.agents[b.dataset.pause].state = "paused"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); });
-  document.querySelectorAll("[data-resume]").forEach((b) => b.onclick = () => { W.agents[b.dataset.resume].state = "active"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); });
-  document.querySelectorAll(".agent.locked").forEach((c) => c.onclick = () => c.classList.toggle("show"));
+      <div><div class="nm">${esc(a.name)}</div><div class="rl">${LABEL[a.state] || a.state}</div></div>
+    </button>`).join("");
+  document.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => openAgent(b.dataset.pick));
+  drawStage();
 }
+
+function drawStage() {
+  const stage = $("stage");
+  if (!selected) { stage.innerHTML = '<p class="muted" style="text-align:center;padding:40px 10px">👈 Pick a teammate to start talking.</p>'; return; }
+  const a = W.agents[selected];
+  if (a.state === "locked") {
+    stage.innerHTML = `
+      <h2>${esc(a.name)} <span class="pill locked">Not on your plan</span></h2>
+      <p class="role muted">${esc(a.role)}</p>
+      <div class="desc" style="background:#f4f9fe;border-radius:12px;padding:12px">${esc(a.desc)}</div>
+      <p style="margin-top:14px"><button class="btn sm" data-req="${selected}">I'm interested in ${esc(a.name)}</button></p>
+      <p style="margin-top:10px"><button class="btn ghost sm" data-close>✕ Back to dashboard</button></p>`;
+    stage.querySelector("[data-req]").onclick = () => toast("This is a demo -- your own SwanDesk lets you turn on " + a.name + " for real.");
+    stage.querySelector("[data-close]").onclick = closeAgent;
+    return;
+  }
+  stage.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+      <div><h2 style="margin-bottom:2px">${esc(a.name)}</h2><p class="role muted" style="margin:0">${esc(a.role)}</p></div>
+      <span class="pill ${a.state}">${LABEL[a.state] || a.state}</span>
+    </div>
+    <div class="desc" style="margin:10px 0">${esc(a.desc)}</div>
+    <div class="modalRow" style="justify-content:flex-start">
+      <button class="btn sm" data-talk>🎭 Talk with ${esc(a.name)}</button>
+      ${a.state === "active" ? `<button class="btn ghost sm" data-pause>Pause</button>` : `<button class="btn ghost sm" data-resume>Resume</button>`}
+      ${selected === "jennifer" ? `<button class="btn ghost sm" data-rec>📼 Live Recording</button>` : ""}
+      <button class="btn ghost sm" data-close>✕ Back to dashboard</button>
+    </div>
+    <div class="chatbox" id="chatbox"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="chatQ" type="text" placeholder="Type a message to ${esc(a.name)}…" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line,#ccd5e0);border-radius:10px" />
+      <button class="btn sm" id="chatSend">Send</button>
+      <button class="btn ghost sm" id="chatMic" title="Speak instead" hidden>🎤 Speak</button>
+    </div>
+    ${selected !== "jonathan" ? `<p class="muted" style="margin-top:8px;font-size:.85rem">Need legal or compliance help too? <button class="btn ghost sm" data-handoff="jonathan" style="padding:2px 8px">Loop in Jonathan</button></p>` : ""}`;
+  stage.querySelector("[data-talk]").onclick = () => openVoiceModal(selected);
+  stage.querySelector("[data-close]").onclick = closeAgent;
+  const pauseBtn = stage.querySelector("[data-pause]"), resumeBtn = stage.querySelector("[data-resume]");
+  if (pauseBtn) pauseBtn.onclick = () => { a.state = "paused"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); };
+  if (resumeBtn) resumeBtn.onclick = () => { a.state = "active"; draw(); toast("Demo only -- nothing is saved. Your own SwanDesk remembers this for real."); };
+  const recBtn = stage.querySelector("[data-rec]"); if (recBtn) recBtn.onclick = openRecordings;
+  const handoff = stage.querySelector("[data-handoff]");
+  if (handoff) handoff.onclick = () => { addBubble("agent", `(${esc(a.name)} flags this to Jonathan -- he'll pick it up from here.)`); };
+  renderChat();
+  $("chatSend").onclick = () => sendChat($("chatQ").value.trim());
+  $("chatQ").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat($("chatQ").value.trim()); });
+  setupMic();
+  if (!chatLog[selected] || !chatLog[selected].length) {
+    const greet = selected === "jennifer" ? "Hi, I'm Jennifer (or Rachel, on the phone)! Ask me anything you'd ask on a real call."
+      : `Hi, I'm ${a.name}! Ask me anything about what I'd do for your business.`;
+    addBubble("agent", greet);
+  }
+}
+
+function openAgent(k) { selected = k; draw(); }
+function closeAgent() { selected = null; draw(); }
+
+// Document upload (Tania, Nov 27): cosmetic in the demo, same honesty pattern as pause/resume above -- there is
+// no real workspace behind a sample business, so this just says plainly what the real thing does.
+$("uploadBtn").onclick = () => toast("Demo only -- your own SwanDesk lets you upload documents for your agents to use.");
+
+// Demo-only: pause/resume and "I'm interested" never touch a server -- there's no real workspace behind this,
+// so this just flips the card in front of you and says so plainly.
 
 function fmt(ms) {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -139,48 +245,109 @@ function startTimer() {
   poll = setInterval(async () => { try { const j = await callStart(); expiresAt = j.expiresAt; } catch (e) { showEnded(e.message); } }, 5 * 60 * 1000);
 }
 
-// "Practice call with Rachel" (Tania, Nov 27): free browser voice only -- the reply itself comes from a real,
-// grounded answer (sd-rachel-chat), but it's SPOKEN here with the browser's own free built-in speechSynthesis,
-// never Cartesia or any paid voice account. Speech recognition (the mic button) is the same deal: the browser's
-// own free built-in recognizer, shown only when the browser actually has one.
+// Talk to any of the four teammates (Tania, Nov 27: "a mic with voice talk that will open the agent just like it
+// does for studio... when they end the chat it goes back to the dashboard with all the agents"). Everything
+// voice-related here is the browser's own free built-in speechSynthesis/SpeechRecognition, client-side, never
+// Cartesia or any paid voice account -- the reply itself comes from sd-agent-chat, grounded in SwanDesk's real
+// team and pricing so nothing is invented.
+const chatLog = {}; // one running transcript per agent key, kept only in this tab, never saved
 function addBubble(who, text) {
-  const box = $("rachelChat");
+  if (!chatLog[selected]) chatLog[selected] = [];
+  chatLog[selected].push({ who, text });
+  const box = $("chatbox"); if (!box) return;
   const d = document.createElement("div");
-  d.style.cssText = "margin:8px 0;padding:10px 13px;border-radius:12px;line-height:1.45;" + (who === "you" ? "background:#eef3f8" : "background:#eaf6ee");
-  d.innerHTML = "<b>" + (who === "you" ? "You" : "Rachel") + ":</b> " + esc(text);
-  box.appendChild(d);
+  d.className = "bub " + who;
+  d.innerHTML = "<b>" + (who === "you" ? "You" : esc(W.agents[selected].name)) + ":</b> " + esc(text);
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+function renderChat() {
+  const box = $("chatbox"); box.innerHTML = "";
+  (chatLog[selected] || []).forEach((m) => {
+    const d = document.createElement("div"); d.className = "bub " + m.who;
+    d.innerHTML = "<b>" + (m.who === "you" ? "You" : esc(W.agents[selected].name)) + ":</b> " + esc(m.text);
+    box.appendChild(d);
+  });
   box.scrollTop = box.scrollHeight;
 }
 function speak(text) {
   if (!("speechSynthesis" in window)) return;
   try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1; speechSynthesis.speak(u); } catch {}
 }
-async function askRachel(question) {
-  if (!question) return;
-  addBubble("you", question);
-  $("rachelQ").value = "";
+async function askAgent(agentKey, question, onReply) {
   try {
-    const r = await fetch("/.netlify/functions/sd-rachel-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+    const r = await fetch("/.netlify/functions/sd-agent-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agent: agentKey, question }) });
     const j = await r.json().catch(() => ({}));
     const answer = j.answer || "Sorry, I didn't catch that -- mind trying again?";
-    addBubble("rachel", answer);
-    speak(answer);
+    onReply(answer);
   } catch {
-    addBubble("rachel", "I'm having trouble right now -- please try again in a moment.");
+    onReply("I'm having trouble right now -- please try again in a moment.");
   }
 }
-$("rachelAsk").onclick = () => askRachel($("rachelQ").value.trim());
-$("rachelQ").addEventListener("keydown", (e) => { if (e.key === "Enter") askRachel($("rachelQ").value.trim()); });
-(function setupMic() {
+function sendChat(question) {
+  if (!question || !selected) return;
+  const agentKey = selected;
+  addBubble("you", question); $("chatQ").value = "";
+  askAgent(agentKey, question, (answer) => { if (selected === agentKey) addBubble("agent", answer); });
+}
+function setupMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return; // no free built-in recognizer in this browser -- text box still works fine
+  const btn = $("chatMic"); if (!SR || !btn) return; // no free built-in recognizer in this browser -- text box still works fine
+  btn.hidden = false;
   const rec = new SR(); rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
-  const btn = $("rachelMic"); btn.hidden = false;
   btn.onclick = () => { try { rec.start(); btn.textContent = "🎤 Listening…"; } catch {} };
-  rec.onresult = (e) => { const t = e.results[0][0].transcript; btn.textContent = "🎤 Speak"; askRachel(t); };
+  rec.onresult = (e) => { btn.textContent = "🎤 Speak"; sendChat(e.results[0][0].transcript); };
   rec.onerror = () => { btn.textContent = "🎤 Speak"; };
   rec.onend = () => { btn.textContent = "🎤 Speak"; };
-})();
+}
+
+// ---------- Voice roleplay modal (Talk now / Stop / End conversation) ----------
+let VM = { agentKey: null, rec: null, on: false };
+function openVoiceModal(agentKey) {
+  VM.agentKey = agentKey;
+  const a = W.agents[agentKey];
+  $("vmAv").textContent = a.name[0]; $("vmName").textContent = a.name;
+  $("vmStatus").textContent = "Say hello, or press Talk now.";
+  $("voiceModal").hidden = false;
+}
+function vmSay(t) { $("vmStatus").textContent = t; }
+function vmListen() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { vmSay("This browser can't listen, but you can still type below after closing this."); return; }
+  if (!VM.rec) {
+    VM.rec = new SR(); VM.rec.lang = "en-US"; VM.rec.interimResults = false; VM.rec.maxAlternatives = 1;
+    VM.rec.onresult = (e) => {
+      const heard = e.results[0][0].transcript;
+      if ($("vmEcho").checked && /^(hi|hello|hey)?\s*$/i.test(heard.trim())) { vmSay("Listening…"); if (VM.on) try { VM.rec.start(); } catch {} return; }
+      vmSay("Thinking…");
+      addBubble("you", heard);
+      askAgent(VM.agentKey, heard, (answer) => {
+        if (VM.agentKey !== selected) return;
+        addBubble("agent", answer); vmSay(answer); speak(answer);
+        if (VM.on && !$("vmPhones").checked) setTimeout(() => { if (VM.on) try { VM.rec.start(); } catch {} }, 400);
+      });
+    };
+    VM.rec.onerror = (e) => { if (e.error === "no-speech" && VM.on) { try { VM.rec.start(); } catch {} return; } if (e.error === "not-allowed") vmSay("Allow the microphone for this page, then press Talk now."); };
+    VM.rec.onend = () => { if (VM.on && $("vmPhones").checked) try { VM.rec.start(); } catch {} };
+  }
+  vmSay("Listening…"); try { VM.rec.start(); } catch { vmSay("Press Talk now."); }
+}
+$("vmTalk").onclick = () => { VM.on = true; vmListen(); };
+$("vmStop").onclick = () => { VM.on = false; try { VM.rec && VM.rec.stop(); } catch {} speechSynthesis.cancel(); vmSay("Stopped. Press Talk now to continue."); };
+$("vmEnd").onclick = () => { VM.on = false; try { VM.rec && VM.rec.stop(); } catch {} speechSynthesis.cancel(); $("voiceModal").hidden = true; renderChat(); };
+
+// ---------- Live Recording -- Jennifer/Rachel only ----------
+const SAMPLE_CALLS = [
+  { when: "Mon, 9:14 AM", who: "New caller · asked about weekend hours", mins: "1:52" },
+  { when: "Mon, 2:37 PM", who: "Existing client · rescheduled an appointment", mins: "0:48" },
+  { when: "Tue, 11:02 AM", who: "Missed-call follow-up · booked a callback", mins: "1:10" }
+];
+function openRecordings() {
+  $("recList").innerHTML = SAMPLE_CALLS.map((c) => `
+    <div class="recRow"><div><b>${esc(c.when)}</b><div class="muted" style="font-size:.85rem">${esc(c.who)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="muted">${esc(c.mins)}</span><button class="btn ghost sm" disabled title="Demo only -- sample calls have no real audio">▶ Play</button></div></div>`).join("");
+  $("recModal").hidden = false;
+}
+$("recClose").onclick = () => { $("recModal").hidden = true; };
 
 (async function init() {
   if (!token) { $("loadingBox").hidden = true; showEnded("This link is missing its demo code. Please ask WebSwan for the full link."); return; }
@@ -189,7 +356,6 @@ $("rachelQ").addEventListener("keydown", (e) => { if (e.key === "Enter") askRach
     expiresAt = j.expiresAt; W = j.workspace;
     $("loadingBox").hidden = true; $("app").hidden = false; $("biz").textContent = W.business;
     draw(); startTimer();
-    addBubble("rachel", "Hi, this is Rachel with SwanDesk AI! Ask me anything you'd ask on a real call.");
   } catch (e) {
     $("loadingBox").hidden = true; showEnded(e.message);
   }
