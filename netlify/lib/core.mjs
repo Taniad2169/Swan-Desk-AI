@@ -9,7 +9,7 @@ export const ADMINS = ["thewebswann@gmail.com", "taniadomingue373@gmail.com"];
 export const AGENTS = {
   jennifer: { name: "Jennifer", role: "Receptionist & Appointment Setter", desc: "Answers your calls 24/7, books appointments on your calendar, takes messages, and makes warm follow-up calls only to people who asked you to call them back (like the contact you met at an event, or the homeowner who said 'call me in 3 months')." },
   eva: { name: "Eva", role: "Executive Assistant & Researcher", desc: "Reads your inbox every morning and tells you what matters, prepares personalized email drafts (with PDFs and photos attached) for you to approve, keeps your follow-ups and tasks on track, sends friendly holiday and market-update emails to your future clients, and does deep research for you (about 40 research reports a month)." },
-  stan: { name: "Tatiana", role: "Social Media, Google Business & Graphic Designer", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and your Google Business Profile, designs the branded pictures in your colors, writes the captions, and publishes them straight to your accounts after you approve (about 30 posts a month, up to 5 accounts plus Google Business)." },
+  stan: { name: "Rosie", role: "Social Media, Google Business & Graphic Designer", desc: "Plans a full month of posts for Facebook, Instagram, LinkedIn, TikTok and your Google Business Profile, designs the branded pictures in your colors, writes the captions, and publishes them straight to your accounts after you approve (about 30 posts a month, up to 5 accounts plus Google Business)." },
   jonathan: { name: "Jonathan", role: "Legal Eagle · Legal & Compliance Assistant", desc: "For doctors: reviews your documents, legal letters and website so your practice stays in compliance (ADA, privacy, cookie and HIPAA forms), keeps you updated on new rules in your state, drafts your privacy policy, cookie policy and accessibility statement, and tells you when it's time to consult an attorney. For attorneys: your legal assistant who reviews documents, helps you prepare for court, builds case presentations, drafts legal letters and does deep research for your review. Jonathan is an AI assistant, not a lawyer, and does not give legal advice." },
   aleksander: { name: "Aleksander Reid", role: "SDR & Sales Coach · Researcher", desc: "Listens to Jennifer's calls -- both the ones she answers and the warm outbound calls she makes -- and coaches her: what landed, what to say differently, patterns across calls, so she keeps getting sharper. Digs up real research on prospects and their market before any outreach goes out, the way a seasoned SDR would, and hands Eva punchy, researched email copy to send instead of generic templates. Aleksander doesn't take calls himself -- he's the coach and researcher behind the scenes." }
 };
@@ -219,7 +219,7 @@ export async function audit(tenantId, who, action, detail) {
 // One SwanDesk code base. A partner (e.g. an outbound-only AI sales company) pays WebSwan one monthly fee for its customers' workspaces.
 // "managed": WebSwan pays the voice AI and phone minutes (minute cap per client). "byo": the partner connects its own phone provider
 // (Twilio etc.) and pays its own minutes; WebSwan charges a platform fee. "license": one-time license fee + monthly hosting & maintenance;
-// the partner connects its own phone, voice AI and AI brain accounts (Eva, Jonathan, Tatiana) and sells to its own customers. All numbers are DRAFTS until the CEO approves Clara's numbers.
+// the partner connects its own phone, voice AI and AI brain accounts (Eva, Jonathan, Rosie) and sells to its own customers. All numbers are DRAFTS until the CEO approves Clara's numbers.
 export const PARTNER_DEFAULTS = {
   edition: "voice", maxClients: 25, admins: [],
   status: "draft", plan: "license", monthlyFee: 499, licenseFee: 15000, licensePaid: false, hostingFee: 499, agentsPaidBy: "partner", includedClients: 25, perClientAfter: 15, minutes: 600, overage: 0.2, setup: 299,
@@ -259,9 +259,9 @@ export function partnerInvoice(p, clients) {
 export const CONNECTIONS = {
   phone: { label: "Phone provider", providers: ["Twilio", "RingCentral", "Telnyx", "Plivo", "Vonage", "SignalWire", "Other"], fields: { account: "Account SID / ID", secret: "Auth token / API key", numbers: "Phone numbers (comma separated)" } },
   voice: { label: "Voice AI (Jennifer's voice)", providers: ["Cartesia", "Retell AI", "Vapi", "ElevenLabs", "Other"], fields: { secret: "API key", agent: "Agent / assistant ID" } },
-  brain: { label: "AI brain for Eva, Jonathan, Tatiana & Aleksander", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
+  brain: { label: "AI brain for Eva, Jonathan, Rosie & Aleksander", providers: ["OpenAI", "Anthropic (Claude)", "Google Gemini", "DeepSeek", "Other"], fields: { secret: "API key", model: "Model name (optional)" } },
   research: { label: "Research search (Eva & Jonathan)", providers: ["Perplexity", "Brave Search", "Other"], fields: { secret: "API key" } },
-  design: { label: "Graphics & posting (Tatiana)", providers: ["Canva", "Content scheduler", "Other"], fields: { secret: "API key / token" } }
+  design: { label: "Graphics & posting (Rosie)", providers: ["Canva", "Content scheduler", "Other"], fields: { secret: "API key / token" } }
 };
 const SECRET = new Set(["secret"]);
 function vaultKey() { const k = process.env.SD_VAULT_KEY; if (!k || k.length < 24) throw new Error("vault key missing"); return crypto.createHash("sha256").update(k).digest(); }
@@ -291,7 +291,7 @@ export async function saveVault(pid, input) {
 }
 
 // ---------- partner admins (the licensee's own staff) ----------
-// Editions: "voice" = Partner Voice Edition (Jennifer only; Eva, Jonathan and Tatiana are upgrades WebSwan turns on),
+// Editions: "voice" = Partner Voice Edition (Jennifer only; Eva, Jonathan and Rosie are upgrades WebSwan turns on),
 // "enterprise" = SwanDesk AI Enterprise (all 4 agents + WorkPilot Business Edition).
 export const EDITION_AGENTS = { voice: ["jennifer"], enterprise: Object.keys(AGENTS) };
 export async function partnerForAdmin(email) {
