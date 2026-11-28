@@ -2,7 +2,7 @@
 // real (but sample) SwanDesk dashboard for themselves -- no Google account needed, since the recipient usually
 // isn't a client yet. The link works for exactly 2 hours from the moment it is FIRST opened, never resets, and
 // never works again once that window closes or Tania revokes it. It never shows a real client's data: everyone
-// who opens a demo link sees the same fixed sample workspace (Jennifer answering calls, Eva paused, Rosie and
+// who opens a demo link sees the same fixed sample workspace (Jennifer answering calls, Eva paused, Tatiana and
 // Jonathan available to add), matching the same picture already shown on the public demo page's mock preview.
 // Pause/Resume on the demo page itself is purely cosmetic (handled client-side, nothing saved here) -- there is
 // nothing real to protect in a sample workspace, so there's no server round-trip needed for it.
@@ -15,13 +15,17 @@ const DEMO_MS = 2 * 60 * 60 * 1000; // exactly 2 hours, clock starts at first op
 const key = (t) => "demo-" + t;
 
 // The fixed sample workspace every demo link shows -- same picture as the public demo page's own mock preview
-// (Jennifer active, Eva paused, Rosie and Jonathan locked/available), so nothing here depends on or exposes a
-// real client's business.
+// (Jennifer active, Eva paused, Tatiana and Jonathan locked/available), so nothing here depends on or exposes a
+// real client's business. Only SwanDesk AI's own four client-facing teammates ever show up in a prospect's demo
+// (Tania, Nov 27: "we are not sharing agents, swandesk-ai and voice studio are not sharing agents" -- Aleksander
+// is a real SwanDesk add-on, but he's an internal coach/researcher behind the scenes, not someone a prospect
+// meets, so he's left out of what a demo visitor sees here, same as every Voice Studio name).
+const DEMO_AGENT_KEYS = ["jennifer", "eva", "stan", "jonathan"];
 function demoWorkspace() {
-  const state = { jennifer: "active", eva: "paused", stan: "locked", jonathan: "locked", aleksander: "locked" };
+  const state = { jennifer: "active", eva: "paused", stan: "locked", jonathan: "locked" };
   return {
     id: "demo", business: "Sample Business (demo)", ownerName: "", status: "active", statusNote: "",
-    agents: Object.fromEntries(Object.keys(AGENTS).map((k) => [k, { ...AGENTS[k], state: state[k] || "locked", since: new Date().toISOString() }]))
+    agents: Object.fromEntries(DEMO_AGENT_KEYS.map((k) => [k, { ...AGENTS[k], state: state[k] || "locked", since: new Date().toISOString() }]))
   };
 }
 

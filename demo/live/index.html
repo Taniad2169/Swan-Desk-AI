@@ -43,6 +43,24 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <p class="muted">This is a real look at the dashboard, with sample data standing in for a client's own business. Nothing you click here is saved -- your own SwanDesk, with your real business, is set up after you sign up.</p>
   </section>
   <section class="grid3" id="agents"></section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>🎙️ Practice call with Rachel</h2>
+    <p class="muted">Rachel is Jennifer's name on the phone. Ask her anything you'd ask on a real call -- what SwanDesk AI does, what it costs, how setup works -- and she'll answer for real, out loud. This is free browser voice for the demo only, not our paid phone line -- want an actual live call instead? Call <a href="tel:+13162486839"><b>(316) 248-6839</b></a> anytime.</p>
+    <div id="rachelChat" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <input id="rachelQ" type="text" placeholder="Type a question for Rachel…" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line,#ccd5e0);border-radius:10px" />
+      <button class="btn sm" id="rachelAsk">Ask Rachel</button>
+      <button class="btn ghost sm" id="rachelMic" title="Speak your question" hidden>🎤 Speak</button>
+    </div>
+  </section>
+
+  <section class="card" style="text-align:center;margin-top:16px">
+    <h2>👋 Meet the team</h2>
+    <p class="muted">See Jennifer, Eva, Tatiana and Jonathan in action, and what your own SwanDesk comes with.</p>
+    <a class="btn" href="media/meet-the-team.mp4" target="_blank" rel="noopener noreferrer">▶ Watch the team video</a>
+  </section>
+
   <section class="card" style="text-align:center;margin-top:16px">
     <h2>Like what you see?</h2>
     <p class="muted">Book a free call and we'll set up your own SwanDesk, built around your business.</p>
@@ -121,6 +139,49 @@ function startTimer() {
   poll = setInterval(async () => { try { const j = await callStart(); expiresAt = j.expiresAt; } catch (e) { showEnded(e.message); } }, 5 * 60 * 1000);
 }
 
+// "Practice call with Rachel" (Tania, Nov 27): free browser voice only -- the reply itself comes from a real,
+// grounded answer (sd-rachel-chat), but it's SPOKEN here with the browser's own free built-in speechSynthesis,
+// never Cartesia or any paid voice account. Speech recognition (the mic button) is the same deal: the browser's
+// own free built-in recognizer, shown only when the browser actually has one.
+function addBubble(who, text) {
+  const box = $("rachelChat");
+  const d = document.createElement("div");
+  d.style.cssText = "margin:8px 0;padding:10px 13px;border-radius:12px;line-height:1.45;" + (who === "you" ? "background:#eef3f8" : "background:#eaf6ee");
+  d.innerHTML = "<b>" + (who === "you" ? "You" : "Rachel") + ":</b> " + esc(text);
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1; speechSynthesis.speak(u); } catch {}
+}
+async function askRachel(question) {
+  if (!question) return;
+  addBubble("you", question);
+  $("rachelQ").value = "";
+  try {
+    const r = await fetch("/.netlify/functions/sd-rachel-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+    const j = await r.json().catch(() => ({}));
+    const answer = j.answer || "Sorry, I didn't catch that -- mind trying again?";
+    addBubble("rachel", answer);
+    speak(answer);
+  } catch {
+    addBubble("rachel", "I'm having trouble right now -- please try again in a moment.");
+  }
+}
+$("rachelAsk").onclick = () => askRachel($("rachelQ").value.trim());
+$("rachelQ").addEventListener("keydown", (e) => { if (e.key === "Enter") askRachel($("rachelQ").value.trim()); });
+(function setupMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // no free built-in recognizer in this browser -- text box still works fine
+  const rec = new SR(); rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+  const btn = $("rachelMic"); btn.hidden = false;
+  btn.onclick = () => { try { rec.start(); btn.textContent = "🎤 Listening…"; } catch {} };
+  rec.onresult = (e) => { const t = e.results[0][0].transcript; btn.textContent = "🎤 Speak"; askRachel(t); };
+  rec.onerror = () => { btn.textContent = "🎤 Speak"; };
+  rec.onend = () => { btn.textContent = "🎤 Speak"; };
+})();
+
 (async function init() {
   if (!token) { $("loadingBox").hidden = true; showEnded("This link is missing its demo code. Please ask WebSwan for the full link."); return; }
   try {
@@ -128,6 +189,7 @@ function startTimer() {
     expiresAt = j.expiresAt; W = j.workspace;
     $("loadingBox").hidden = true; $("app").hidden = false; $("biz").textContent = W.business;
     draw(); startTimer();
+    addBubble("rachel", "Hi, this is Rachel with SwanDesk AI! Ask me anything you'd ask on a real call.");
   } catch (e) {
     $("loadingBox").hidden = true; showEnded(e.message);
   }
